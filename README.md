@@ -86,7 +86,7 @@ DB_NAME=healthcare_system
 DB_PORT=3306
 ```
 
-Frontend `client/.env` (already configured):
+Frontend `client/.env`:
 ```env
 REACT_APP_API_URL=http://localhost:9358/api
 ```
@@ -223,72 +223,6 @@ PUT    /api/doctors/:id            Update doctor (admin only)
 2. Click "Sign In"
 3. Access your dashboard
 
-## 🧪 Testing
-
-### Test Registration (cURL)
-```bash
-curl -X POST http://localhost:9358/api/auth/signup \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "John Doe",
-    "email": "john@example.com",
-    "password": "password123",
-    "role": "Patient",
-    "gender": "Male",
-    "date_of_birth": "1990-01-15"
-  }'
-```
-
-### Test Login
-```bash
-curl -X POST http://localhost:9358/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "john@example.com",
-    "password": "password123"
-  }'
-```
-
-## 🐛 Troubleshooting
-
-### Backend Issues
-
-**MySQL Connection Error:**
-```bash
-# Check if MySQL is running
-brew services list
-
-# Restart MySQL
-brew services restart mysql
-
-# Test connection
-mysql -u healthcare_user -p'Healthcare@123'
-```
-
-**Port Already in Use:**
-```bash
-# Check what's using port 9358
-lsof -i :9358
-
-# Kill the process
-kill -9 <PID>
-```
-
-### Frontend Issues
-
-**Can't connect to backend:**
-- Verify backend is running on port 9358
-- Check `client/.env` has correct API URL
-- Open browser console for error messages
-
-**Page won't load:**
-```bash
-# Clear React cache and restart
-cd client
-rm -rf node_modules package-lock.json
-npm install
-npm start
-```
 
 ## 📊 Database Schema
 
@@ -306,39 +240,3 @@ npm start
 | date_of_birth | DATE | Optional |
 | created_at | TIMESTAMP | Auto-generated |
 | updated_at | TIMESTAMP | Auto-updated |
-
-## 🎨 Design System
-
-**Colors:**
-- Primary: Mint Green (#A8D5BA)
-- Dark: Charcoal (#2B2B2B)
-- Background: White (#FFFFFF)
-- Text: Dark Gray (#333333)
-
-**Typography:**
-- Headers: Bold, 24-32px
-- Body: Regular, 14-16px
-- Inputs: 14px
-
-## 🚧 Roadmap
-
-- [ ] Hospital directory page
-- [ ] Doctor directory with filters
-- [ ] Appointment booking system
-- [ ] User profile editing
-- [ ] Password reset via email
-- [ ] Admin dashboard
-- [ ] Real-time chat
-- [ ] Email notifications
-
-## 📝 License
-
-Academic project for Course 471
-
-## 🤝 Contributing
-
-This is an educational project. Feel free to fork and experiment!
-
----
-
-**Built with the MERN Stack** | **MVC Architecture** | **RESTful API**
