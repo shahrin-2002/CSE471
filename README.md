@@ -1,6 +1,6 @@
 # HealthConnect 🏥
 
-A full-stack healthcare management system built with the MERN stack (MySQL, Express.js, React.js, Node.js) featuring user authentication, role-based access control, and a modern UI.
+A full-stack healthcare management system built with the MERN stack (MongoDB, Express.js, React.js, Node.js) featuring user authentication, role-based access control, and a modern UI.
 
 ## ✨ Features
 
@@ -27,7 +27,7 @@ A full-stack healthcare management system built with the MERN stack (MySQL, Expr
 
 ### Prerequisites
 - Node.js (v14+)
-- MySQL Server
+- MongoDB Atlas account (free tier) or local MongoDB
 - npm or yarn
 
 ### 1. Install Dependencies
@@ -42,48 +42,56 @@ npm install
 cd ..
 ```
 
-### 2. Setup MySQL Database
+### 2. Setup MongoDB Database
+
+**Option A: MongoDB Atlas (Cloud - Recommended)**
+
+1. Go to [MongoDB Atlas](https://www.mongodb.com/cloud/atlas/register)
+2. Create a free account
+3. Create a new cluster (M0 Sandbox - Free tier)
+4. Create a database user:
+   - Click "Database Access" → "Add New Database User"
+   - Choose password authentication
+   - Set username and password (save these!)
+5. Whitelist your IP:
+   - Click "Network Access" → "Add IP Address"
+   - Add your current IP or "Allow Access from Anywhere" (0.0.0.0/0) for development
+6. Get your connection string:
+   - Click "Connect" on your cluster
+   - Choose "Connect your application"
+   - Copy the connection string
+   - Replace `<password>` with your actual password
+   - Add `/healthcare_system` before the `?` to specify database name
+
+**Option B: Local MongoDB**
 
 ```bash
-mysql -u root -p
+# Install MongoDB Community Edition
+# Then start the service:
+mongod
 ```
 
-Then run:
-```sql
-CREATE DATABASE healthcare_system;
-USE healthcare_system;
-
-CREATE TABLE users (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
-  email VARCHAR(255) UNIQUE NOT NULL,
-  password VARCHAR(255) NOT NULL,
-  role ENUM('Patient', 'Doctor', 'Hospital_Admin') NOT NULL,
-  phone VARCHAR(20) DEFAULT NULL,
-  address TEXT DEFAULT NULL,
-  gender ENUM('Male', 'Female', 'Other') DEFAULT NULL,
-  date_of_birth DATE DEFAULT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-
-CREATE USER IF NOT EXISTS 'healthcare_user'@'localhost' IDENTIFIED BY 'Healthcare@123';
-GRANT ALL PRIVILEGES ON healthcare_system.* TO 'healthcare_user'@'localhost';
-FLUSH PRIVILEGES;
-EXIT;
+Your local connection string will be:
+```
+mongodb://localhost:27017/healthcare_system
 ```
 
 ### 3. Configure Environment
 
-Backend `.env` (already configured):
+Backend `.env`:
 ```env
 PORT=9358
 JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
-DB_HOST=localhost
-DB_USER=healthcare_user
-DB_PASSWORD=Healthcare@123
-DB_NAME=healthcare_system
-DB_PORT=3306
+MONGODB_URI=your_mongodb_connection_string_here
+```
+
+**Example MongoDB URI:**
+```env
+# MongoDB Atlas
+MONGODB_URI=mongodb+srv://username:password@cluster0.xxxxx.mongodb.net/healthcare_system?retryWrites=true&w=majority
+
+# Local MongoDB
+MONGODB_URI=mongodb://localhost:27017/healthcare_system
 ```
 
 Frontend `client/.env`:
@@ -133,8 +141,7 @@ npm start
 │   └── public/
 │
 ├── server.js                  # Express server
-├── package.json               # Backend dependencies
-└── setup_database.sql         # DB setup script
+└── package.json               # Backend dependencies
 ```
 
 ## 🛠 Tech Stack
@@ -143,7 +150,7 @@ npm start
 |-------|-----------|
 | **Frontend** | React 18, React Router v6, Axios |
 | **Backend** | Node.js, Express.js 4.18 |
-| **Database** | MySQL with mysql2 driver |
+| **Database** | MongoDB with Mongoose ODM |
 | **Authentication** | JWT (24-hour expiry) |
 | **Security** | bcrypt password hashing |
 | **State** | React Context API |
@@ -196,11 +203,12 @@ PUT    /api/doctors/:id            Update doctor (admin only)
 
 - ✅ JWT authentication with 24-hour expiry
 - ✅ bcrypt password hashing (10 salt rounds)
-- ✅ SQL injection prevention (parameterized queries)
+- ✅ NoSQL injection prevention with Mongoose validation
 - ✅ Role-based access control (RBAC)
 - ✅ Protected routes with automatic redirects
 - ✅ CORS enabled for cross-origin requests
 - ✅ Environment-based configuration
+- ✅ Email format validation at schema level
 
 ## 💻 Usage
 
@@ -212,7 +220,7 @@ PUT    /api/doctors/:id            Update doctor (admin only)
    - Email
    - Gender (optional)
    - Date of Birth (optional)
-   - Role (Patient, Doctor, or Hospital Admin)
+   - Role (patient, doctor, or admin)
    - Password & Confirm Password
    - Accept terms
 4. Click "Create an Account"
@@ -226,17 +234,23 @@ PUT    /api/doctors/:id            Update doctor (admin only)
 
 ## 📊 Database Schema
 
-### users
+### users (MongoDB Collection)
 | Field | Type | Constraints |
 |-------|------|-------------|
-| id | INT | PK, AUTO_INCREMENT |
-| name | VARCHAR(255) | NOT NULL |
-| email | VARCHAR(255) | UNIQUE, NOT NULL |
-| password | VARCHAR(255) | NOT NULL (hashed) |
-| role | ENUM | Patient, Doctor, Hospital_Admin |
-| phone | VARCHAR(20) | Optional |
-| address | TEXT | Optional |
-| gender | ENUM | Male, Female, Other |
-| date_of_birth | DATE | Optional |
-| created_at | TIMESTAMP | Auto-generated |
-| updated_at | TIMESTAMP | Auto-updated |
+| _id | ObjectId | Auto-generated (MongoDB) |
+| name | String | Required, trimmed |
+| email | String | Required, unique, lowercase, validated |
+| password | String | Required (hashed with bcrypt) |
+| role | String | Enum: patient, doctor, admin |
+| phone | String | Optional, trimmed |
+| address | String | Optional, trimmed |
+| gender | String | Enum: male, female, other, null |
+| date_of_birth | Date | Optional |
+| createdAt | Date | Auto-generated (Mongoose timestamps) |
+| updatedAt | Date | Auto-updated (Mongoose timestamps) |
+
+**Note:** The MongoDB schema uses Mongoose ODM which provides:
+- Automatic password hashing before saving
+- Data validation at the schema level
+- Email format validation
+- Indexed email field for faster lookups

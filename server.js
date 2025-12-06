@@ -6,8 +6,8 @@
 
 const express = require('express');
 const cors = require('cors');
+const mongoose = require('mongoose');
 require('dotenv').config();
-const mysql = require('mysql2/promise');
 
 // Import route initializers
 const initAuthRoutes = require('./routes/auth');
@@ -20,31 +20,38 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// MySQL Connection Pool
-const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
+// MongoDB Connection
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => {
+    console.log('✅ Connected to MongoDB');
+  })
+  .catch((error) => {
+    console.error('❌ MongoDB connection error:', error.message);
+    process.exit(1);
+  });
+
+// MongoDB connection event handlers
+mongoose.connection.on('disconnected', () => {
+  console.log('⚠️  MongoDB disconnected');
 });
 
-// Make pool accessible to routes
-app.use((req, res, next) => {
-  req.pool = pool;
-  next();
+mongoose.connection.on('error', (error) => {
+  console.error('❌ MongoDB error:', error);
 });
 
 // API Routes (MVC Pattern)
-app.use('/api/auth', initAuthRoutes(pool));
+app.use('/api/auth', initAuthRoutes());
 app.use('/api/hospitals', hospitalRoutes);
 app.use('/api/doctors', doctorRoutes);
 
 // Basic health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ status: 'Server is running', port: process.env.PORT });
+  const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+  res.json({
+    status: 'Server is running',
+    port: process.env.PORT,
+    database: dbStatus
+  });
 });
 
 // Error handling middleware
@@ -75,6 +82,18 @@ app.listen(PORT, () => {
   console.log(`   - GET    http://127.0.0.1:${PORT}/api/doctors/:id`);
   console.log(`   - POST   http://127.0.0.1:${PORT}/api/doctors`);
   console.log(`✅ Health check: http://127.0.0.1:${PORT}/health\n`);
+});
+
+// Graceful shutdown
+process.on('SIGINT', async () => {
+  try {
+    await mongoose.connection.close();
+    console.log('\n✅ MongoDB connection closed');
+    process.exit(0);
+  } catch (error) {
+    console.error('❌ Error during shutdown:', error);
+    process.exit(1);
+  }
 });
 
 module.exports = app;

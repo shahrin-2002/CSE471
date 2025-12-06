@@ -9,13 +9,13 @@ const { verifyToken } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Initialize controller with database pool
-const initAuthRoutes = (pool) => {
-  const authController = new AuthController(pool);
+// Initialize controller
+const initAuthRoutes = () => {
+  const authController = new AuthController();
 
   /**
    * POST /api/auth/signup
-   * Register a new user (Patient, Doctor, or Hospital Admin)
+   * Register a new user (Patient, Doctor, or Admin)
    */
   router.post('/signup', (req, res) => authController.signup(req, res));
 

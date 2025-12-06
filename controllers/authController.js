@@ -2,15 +2,10 @@
  * Auth Controller - Handles authentication business logic
  */
 
-const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
 class AuthController {
-  constructor(pool) {
-    this.userModel = new User(pool);
-  }
-
   /**
    * User registration
    */
@@ -27,16 +22,16 @@ class AuthController {
       }
 
       // Validate role
-      const validRoles = ['Patient', 'Doctor', 'Hospital_Admin'];
-      if (!validRoles.includes(role)) {
+      const validRoles = ['patient', 'doctor', 'admin'];
+      if (!validRoles.includes(role.toLowerCase())) {
         return res.status(400).json({
           error: 'Invalid Role',
-          message: 'Role must be one of: Patient, Doctor, Hospital_Admin'
+          message: 'Role must be one of: patient, doctor, admin'
         });
       }
 
       // Check if email already exists
-      const emailExists = await this.userModel.emailExists(email);
+      const emailExists = await User.emailExists(email);
       if (emailExists) {
         return res.status(409).json({
           error: 'Email Already Exists',
@@ -44,28 +39,45 @@ class AuthController {
         });
       }
 
-      // Hash password
-      const hashedPassword = await bcrypt.hash(password, 10);
-
-      // Create user
-      const newUser = await this.userModel.create({
+      // Create user (password will be hashed automatically by the pre-save hook)
+      const newUser = await User.create({
         name,
         email,
-        password: hashedPassword,
-        role,
+        password,
+        role: role.toLowerCase(),
         phone,
         address,
         gender,
         date_of_birth
       });
 
+      // Convert to JSON to remove password
+      const userResponse = newUser.toJSON();
+
       res.status(201).json({
         message: 'User registered successfully',
-        user: newUser
+        user: userResponse
       });
 
     } catch (error) {
       console.error('Signup error:', error);
+
+      // Handle Mongoose validation errors
+      if (error.name === 'ValidationError') {
+        return res.status(400).json({
+          error: 'Validation Error',
+          message: Object.values(error.errors).map(e => e.message).join(', ')
+        });
+      }
+
+      // Handle duplicate email error
+      if (error.code === 11000) {
+        return res.status(409).json({
+          error: 'Email Already Exists',
+          message: 'A user with this email already exists'
+        });
+      }
+
       res.status(500).json({
         error: 'Internal Server Error',
         message: 'An error occurred during registration'
@@ -89,7 +101,7 @@ class AuthController {
       }
 
       // Find user by email
-      const user = await this.userModel.findByEmail(email);
+      const user = await User.findByEmail(email);
       if (!user) {
         return res.status(401).json({
           error: 'Authentication Failed',
@@ -97,8 +109,8 @@ class AuthController {
         });
       }
 
-      // Verify password
-      const isPasswordValid = await bcrypt.compare(password, user.password);
+      // Verify password using the comparePassword method
+      const isPasswordValid = await user.comparePassword(password);
       if (!isPasswordValid) {
         return res.status(401).json({
           error: 'Authentication Failed',
@@ -109,7 +121,7 @@ class AuthController {
       // Generate JWT token
       const token = jwt.sign(
         {
-          id: user.id,
+          id: user._id,
           email: user.email,
           name: user.name,
           role: user.role
@@ -119,12 +131,12 @@ class AuthController {
       );
 
       // Return token and user info (without password)
-      const { password: _, ...userWithoutPassword } = user;
+      const userResponse = user.toJSON();
 
       res.status(200).json({
         message: 'Login successful',
         token,
-        user: userWithoutPassword
+        user: userResponse
       });
 
     } catch (error) {
@@ -143,7 +155,7 @@ class AuthController {
     try {
       const userId = req.user.id;
 
-      const user = await this.userModel.findById(userId);
+      const user = await User.findById(userId);
       if (!user) {
         return res.status(404).json({
           error: 'User Not Found',
@@ -151,9 +163,12 @@ class AuthController {
         });
       }
 
+      // Convert to JSON to remove password
+      const userResponse = user.toJSON();
+
       res.status(200).json({
         message: 'Profile retrieved successfully',
-        user
+        user: userResponse
       });
 
     } catch (error) {

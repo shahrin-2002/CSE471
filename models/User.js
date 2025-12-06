@@ -1,119 +1,110 @@
 /**
- * User Model - Handles all database operations for users
+ * User Model - MongoDB Schema with Mongoose
  */
 
-class User {
-  constructor(pool) {
-    this.pool = pool;
-  }
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 
-  /**
-   * Find user by email
-   * @param {string} email
-   * @returns {Promise<Object|null>}
-   */
-  async findByEmail(email) {
-    const connection = await this.pool.getConnection();
-    try {
-      const [users] = await connection.query(
-        'SELECT id, name, email, password, role, phone, address, gender, date_of_birth, created_at FROM users WHERE email = ?',
-        [email]
-      );
-      return users.length > 0 ? users[0] : null;
-    } finally {
-      connection.release();
+const userSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: [true, 'Name is required'],
+    trim: true
+  },
+  email: {
+    type: String,
+    required: [true, 'Email is required'],
+    unique: true,
+    lowercase: true,
+    trim: true,
+    match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email']
+  },
+  password: {
+    type: String,
+    required: [true, 'Password is required'],
+    minlength: 6
+  },
+  role: {
+    type: String,
+    enum: ['patient', 'doctor', 'admin'],
+    default: 'patient'
+  },
+  phone: {
+    type: String,
+    default: null,
+    trim: true
+  },
+  address: {
+    type: String,
+    default: null,
+    trim: true
+  },
+  gender: {
+    type: String,
+    enum: ['male', 'female', 'other', null],
+    default: null
+  },
+  date_of_birth: {
+    type: Date,
+    default: null
+  }
+}, {
+  timestamps: true,
+  toJSON: {
+    transform: function(doc, ret) {
+      ret.id = ret._id;
+      delete ret._id;
+      delete ret.__v;
+      delete ret.password;
+      return ret;
     }
   }
+});
 
-  /**
-   * Find user by ID
-   * @param {number} id
-   * @returns {Promise<Object|null>}
-   */
-  async findById(id) {
-    const connection = await this.pool.getConnection();
-    try {
-      const [users] = await connection.query(
-        'SELECT id, name, email, role, phone, address, gender, date_of_birth, created_at FROM users WHERE id = ?',
-        [id]
-      );
-      return users.length > 0 ? users[0] : null;
-    } finally {
-      connection.release();
-    }
+// Index for faster email lookups
+userSchema.index({ email: 1 });
+
+/**
+ * Static method to find user by email
+ * @param {string} email
+ * @returns {Promise<Object|null>}
+ */
+userSchema.statics.findByEmail = async function(email) {
+  return await this.findOne({ email: email.toLowerCase() });
+};
+
+/**
+ * Static method to check if email exists
+ * @param {string} email
+ * @returns {Promise<boolean>}
+ */
+userSchema.statics.emailExists = async function(email) {
+  const user = await this.findOne({ email: email.toLowerCase() });
+  return !!user;
+};
+
+/**
+ * Instance method to compare password
+ * @param {string} candidatePassword
+ * @returns {Promise<boolean>}
+ */
+userSchema.methods.comparePassword = async function(candidatePassword) {
+  return await bcrypt.compare(candidatePassword, this.password);
+};
+
+// Hash password before saving
+userSchema.pre('save', async function(next) {
+  if (!this.isModified('password')) return next();
+
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error) {
+    next(error);
   }
+});
 
-  /**
-   * Create new user
-   * @param {Object} userData
-   * @returns {Promise<Object>}
-   */
-  async create(userData) {
-    const connection = await this.pool.getConnection();
-    try {
-      const { name, email, password, role, phone, address, gender, date_of_birth } = userData;
-
-      const [result] = await connection.query(
-        `INSERT INTO users (name, email, password, role, phone, address, gender, date_of_birth)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [name, email, password, role, phone || null, address || null, gender || null, date_of_birth || null]
-      );
-
-      return {
-        id: result.insertId,
-        name,
-        email,
-        role,
-        phone: phone || null,
-        address: address || null,
-        gender: gender || null,
-        date_of_birth: date_of_birth || null
-      };
-    } finally {
-      connection.release();
-    }
-  }
-
-  /**
-   * Update user
-   * @param {number} id
-   * @param {Object} updates
-   * @returns {Promise<boolean>}
-   */
-  async update(id, updates) {
-    const connection = await this.pool.getConnection();
-    try {
-      const setClause = Object.keys(updates).map(key => `${key} = ?`).join(', ');
-      const values = [...Object.values(updates), id];
-
-      await connection.query(
-        `UPDATE users SET ${setClause} WHERE id = ?`,
-        values
-      );
-
-      return true;
-    } finally {
-      connection.release();
-    }
-  }
-
-  /**
-   * Check if email exists
-   * @param {string} email
-   * @returns {Promise<boolean>}
-   */
-  async emailExists(email) {
-    const connection = await this.pool.getConnection();
-    try {
-      const [users] = await connection.query(
-        'SELECT id FROM users WHERE email = ?',
-        [email]
-      );
-      return users.length > 0;
-    } finally {
-      connection.release();
-    }
-  }
-}
+const User = mongoose.model('User', userSchema);
 
 module.exports = User;
