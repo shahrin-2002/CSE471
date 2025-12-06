@@ -61,9 +61,6 @@ const userSchema = new mongoose.Schema({
   }
 });
 
-// Index for faster email lookups
-userSchema.index({ email: 1 });
-
 /**
  * Static method to find user by email
  * @param {string} email
