@@ -19,7 +19,7 @@ const Register = () => {
     date_of_birth: '',
     password: '',
     confirmPassword: '',
-    role: 'Patient', // Default role
+    role: 'patient', // Default role
     acceptTerms: false,
   });
 
@@ -166,9 +166,9 @@ const Register = () => {
                 onChange={handleChange}
               >
                 <option value="">Select Gender</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
               </select>
             </div>
 
@@ -193,9 +193,9 @@ const Register = () => {
                 onChange={handleChange}
                 required
               >
-                <option value="Patient">Patient</option>
-                <option value="Doctor">Doctor</option>
-                <option value="Hospital_Admin">Hospital Admin</option>
+                <option value="patient">Patient</option>
+                <option value="doctor">Doctor</option>
+                <option value="admin">Admin</option>
               </select>
             </div>
 
