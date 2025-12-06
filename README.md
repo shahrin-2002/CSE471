@@ -89,9 +89,6 @@ MONGODB_URI=your_mongodb_connection_string_here
 ```env
 # MongoDB Atlas
 MONGODB_URI=mongodb+srv://healthcare_user:HealthCare123@healthcareproject.ud0om4p.mongodb.net/?appName=healthcareproject
-
-# Local MongoDB
-MONGODB_URI=mongodb://localhost:27017/healthcare_system
 ```
 
 Frontend `client/.env`:
