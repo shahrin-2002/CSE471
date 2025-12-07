@@ -13,12 +13,18 @@ require('dotenv').config();
 const initAuthRoutes = require('./routes/auth');
 const hospitalRoutes = require('./routes/hospitals');
 const doctorRoutes = require('./routes/doctors');
+const userRoutes = require('./routes/userRoutes');
+const documentRoutes = require('./routes/documentRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use('/api/users', userRoutes);
+app.use('/api/documents', documentRoutes);
+app.use('/api/admin', adminRoutes);
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI)
