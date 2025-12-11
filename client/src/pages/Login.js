@@ -25,7 +25,6 @@ const Login = () => {
       ...formData,
       [e.target.name]: e.target.value,
     });
-    // Clear error when user starts typing
     if (error) setError('');
   };
 
@@ -33,7 +32,6 @@ const Login = () => {
     e.preventDefault();
     setError('');
 
-    // Validation
     if (!formData.email || !formData.password) {
       setError('Please fill in all fields');
       return;
@@ -45,8 +43,14 @@ const Login = () => {
       const result = await login(formData.email, formData.password);
 
       if (result.success) {
-        // Redirect to dashboard or home page
-        navigate('/dashboard');
+        const role = result.user.role;
+
+        // Redirect based on role
+        if (role === 'Hospital_Admin') {
+          navigate('/admin');
+        } else {
+          navigate('/dashboard');
+        }
       } else {
         setError(result.error);
       }
@@ -63,7 +67,7 @@ const Login = () => {
       <div className="auth-header">
         <button className="hamburger-menu">☰</button>
         <h1>HealthConnect</h1>
-        <div></div> {/* Spacer for flex layout */}
+        <div></div>
       </div>
 
       {/* Navigation */}
@@ -144,3 +148,4 @@ const Login = () => {
 };
 
 export default Login;
+
