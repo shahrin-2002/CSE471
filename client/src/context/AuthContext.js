@@ -46,11 +46,12 @@ export const AuthProvider = ({ children }) => {
       setToken(newToken);
       setUser(newUser);
 
-      return { success: true };
+      // ✅ Return user so Login.js can redirect based on role
+      return { success: true, user: newUser };
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || 'Login failed',
+        error: error.response?.data?.error || 'Login failed',
       };
     }
   };
@@ -65,7 +66,7 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || 'Signup failed',
+        error: error.response?.data?.error || 'Signup failed',
       };
     }
   };
@@ -91,7 +92,7 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || 'Failed to fetch profile',
+        error: error.response?.data?.error || 'Failed to fetch profile',
       };
     }
   };
@@ -105,6 +106,7 @@ export const AuthProvider = ({ children }) => {
     logout,
     getProfile,
     isAuthenticated: !!token,
+    setUser, // expose setUser for profile updates
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
