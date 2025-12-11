@@ -1,74 +1,74 @@
-import { useEffect, useState, useContext } from 'react';
-import axios from '../services/api';
-import { AuthContext } from '../context/AuthContext';
+import { useEffect, useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
 
 export default function Documents() {
-  const { user } = useContext(AuthContext);
-  const [list, setList] = useState([]);
-  const [type, setType] = useState('NID');
+  const { user } = useAuth();
+  const [docs, setDocs] = useState([]);
   const [file, setFile] = useState(null);
   const [msg, setMsg] = useState('');
 
-  const load = async () => {
+  const loadDocs = async () => {
     try {
-      const { data } = await axios.get('/users/me');
-      setList(data.documents || []);
-    } catch {
+      const { data } = await api.get('/documents');
+      setDocs(data.documents || []);
+    } catch (err) {
       setMsg('Failed to load documents');
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    loadDocs();
+  }, []);
 
   const upload = async () => {
+    if (!file) return;
     setMsg('');
-    if (!file) return setMsg('Select a file first');
+    const formData = new FormData();
+    formData.append('file', file);
+
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('type', type);
-      await axios.post('/documents', formData);
+      await api.post('/documents', formData);
       setFile(null);
-      load();
-      setMsg('Uploaded');
+      await loadDocs();
+      setMsg('Document uploaded');
     } catch (err) {
       setMsg(err.response?.data?.error || 'Upload failed');
     }
   };
 
   const remove = async (id) => {
-    setMsg('');
     try {
-      await axios.delete(`/documents/${id}`);
-      load();
-      setMsg('Deleted');
+      await api.delete(`/documents/${id}`);
+      await loadDocs();
     } catch (err) {
-      setMsg(err.response?.data?.error || 'Delete failed');
+      setMsg('Delete failed');
     }
   };
 
   return (
-    <div>
+    <div className="card">
       <h2>My Documents</h2>
-      <select value={type} onChange={e => setType(e.target.value)} disabled={user?.locked}>
-        <option>NID</option>
-        <option>Passport</option>
-        <option>License</option>
-      </select>
-      <input type="file" onChange={e => setFile(e.target.files[0])} disabled={user?.locked} />
-      <button onClick={upload} disabled={user?.locked}>Upload</button>
+
+      <input type="file" onChange={e => setFile(e.target.files[0])} />
+      <button className="btn" onClick={upload}>Upload</button>
+
+      {msg && <p className="kicker">{msg}</p>}
 
       <ul>
-        {list.map(doc => (
-          <li key={doc._id || doc.id}>
-            {doc.type} - {doc.status} -
-            <a href={`/api/documents/preview/${doc.filename}`} target="_blank" rel="noreferrer">Preview</a>
-            <button onClick={() => remove(doc._id || doc.id)} disabled={user?.locked || doc.status === 'verified'}>Delete</button>
+        {docs.map(doc => (
+          <li key={doc._id}>
+            <a href={`/api/documents/preview/${doc.filename}`} target="_blank" rel="noreferrer">
+              {doc.originalName || doc.filename}
+            </a>
+            {doc.verified ? (
+              <span style={{ color: 'green' }}> ✅ Verified</span>
+            ) : (
+              <button className="btn" onClick={() => remove(doc._id)}>Delete</button>
+            )}
           </li>
         ))}
       </ul>
-
-      {msg && <p>{msg}</p>}
     </div>
   );
 }
