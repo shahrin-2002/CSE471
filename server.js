@@ -72,6 +72,7 @@ app.use((req, res) => {
 const PORT = process.env.PORT || 9358;
 app.listen(PORT, () => {
   console.log(`\n🏥 Healthcare API Server running on http://127.0.0.1:${PORT}`);
+  console.log(`\n🏥 Healthcare API Server running on http://127.0.0.1:${PORT}`);
   console.log(`📝 Endpoints available:`);
   console.log(`   - POST   http://127.0.0.1:${PORT}/api/auth/signup`);
   console.log(`   - POST   http://127.0.0.1:${PORT}/api/auth/login`);
@@ -81,6 +82,15 @@ app.listen(PORT, () => {
   console.log(`   - GET    http://127.0.0.1:${PORT}/api/doctors`);
   console.log(`   - GET    http://127.0.0.1:${PORT}/api/doctors/:id`);
   console.log(`   - POST   http://127.0.0.1:${PORT}/api/doctors`);
+  console.log(`   - GET    http://127.0.0.1:${PORT}/api/users/me`);
+  console.log(`   - PUT    http://127.0.0.1:${PORT}/api/users/me`);
+  console.log(`   - POST   http://127.0.0.1:${PORT}/api/documents`);
+  console.log(`   - GET    http://127.0.0.1:${PORT}/api/documents/preview/:filename`);
+  console.log(`   - DELETE http://127.0.0.1:${PORT}/api/documents/:id`);
+  console.log(`   - GET    http://127.0.0.1:${PORT}/api/admin/documents`);
+  console.log(`   - PATCH  http://127.0.0.1:${PORT}/api/admin/documents/:id/verify`);
+  console.log(`   - PATCH  http://127.0.0.1:${PORT}/api/admin/documents/:id/reject`);
+  console.log(`   - PATCH  http://127.0.0.1:${PORT}/api/admin/users/:id/lock`);
   console.log(`✅ Health check: http://127.0.0.1:${PORT}/health\n`);
 });
 
