@@ -1,0 +1,29 @@
+import { useEffect, useState } from 'react';
+import { appointmentsAPI } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+
+export default function DoctorSlots() {
+  const { user } = useAuth();
+  const [appts, setAppts] = useState([]);
+
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await appointmentsAPI.doctor(user._id);
+      setAppts(data.appointments || []);
+    };
+    if (user) load();
+  }, [user]);
+
+  return (
+    <div className="card">
+      <h2>Doctor Appointments</h2>
+      <ul>
+        {appts.map(a => (
+          <li key={a._id}>
+            Patient: {a.patientId?.name || a.patientId} | {new Date(a.date).toLocaleString()} | {a.status}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
