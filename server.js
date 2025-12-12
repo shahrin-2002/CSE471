@@ -13,6 +13,7 @@ require('dotenv').config();
 const initAuthRoutes = require('./routes/auth');
 const hospitalRoutes = require('./routes/hospitals');
 const doctorRoutes = require('./routes/doctors');
+const appointmentRoutes = require('./routes/appointmentRoutes'); // ✅ new import
 
 const app = express();
 
@@ -43,6 +44,7 @@ mongoose.connection.on('error', (error) => {
 app.use('/api/auth', initAuthRoutes());
 app.use('/api/hospitals', hospitalRoutes);
 app.use('/api/doctors', doctorRoutes);
+app.use('/api/appointments', appointmentRoutes); // ✅ mount new routes
 
 // Basic health check endpoint
 app.get('/health', (req, res) => {
@@ -72,7 +74,6 @@ app.use((req, res) => {
 const PORT = process.env.PORT || 9358;
 app.listen(PORT, () => {
   console.log(`\n🏥 Healthcare API Server running on http://127.0.0.1:${PORT}`);
-  console.log(`\n🏥 Healthcare API Server running on http://127.0.0.1:${PORT}`);
   console.log(`📝 Endpoints available:`);
   console.log(`   - POST   http://127.0.0.1:${PORT}/api/auth/signup`);
   console.log(`   - POST   http://127.0.0.1:${PORT}/api/auth/login`);
@@ -91,6 +92,11 @@ app.listen(PORT, () => {
   console.log(`   - PATCH  http://127.0.0.1:${PORT}/api/admin/documents/:id/verify`);
   console.log(`   - PATCH  http://127.0.0.1:${PORT}/api/admin/documents/:id/reject`);
   console.log(`   - PATCH  http://127.0.0.1:${PORT}/api/admin/users/:id/lock`);
+  console.log(`   - POST   http://127.0.0.1:${PORT}/api/appointments/book`);
+  console.log(`   - PATCH  http://127.0.0.1:${PORT}/api/appointments/:id/reschedule`);
+  console.log(`   - DELETE http://127.0.0.1:${PORT}/api/appointments/:id/cancel`);
+  console.log(`   - GET    http://127.0.0.1:${PORT}/api/appointments/mine`);
+  console.log(`   - GET    http://127.0.0.1:${PORT}/api/appointments/doctor/:doctorId`);
   console.log(`✅ Health check: http://127.0.0.1:${PORT}/health\n`);
 });
 
@@ -105,5 +111,7 @@ process.on('SIGINT', async () => {
     process.exit(1);
   }
 });
+
+module.exports = app; 
 
 module.exports = app;
