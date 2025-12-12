@@ -3,24 +3,35 @@ import { appointmentsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 export default function DoctorSlots() {
-  const { user } = useAuth();
-  const [appts, setAppts] = useState([]);
+  const { user } = useAuth(); // doctor user
+  const [appointments, setAppointments] = useState([]);
+  const [msg, setMsg] = useState('');
+
+  // Load doctor's appointments
+  const loadAppointments = async () => {
+    try {
+      const { data } = await appointmentsAPI.doctor(user._id);
+      setAppointments(data.appointments || []);
+    } catch (err) {
+      setMsg(err.response?.data?.error || 'Failed to load doctor appointments');
+    }
+  };
 
   useEffect(() => {
-    const load = async () => {
-      const { data } = await appointmentsAPI.doctor(user._id);
-      setAppts(data.appointments || []);
-    };
-    if (user) load();
+    if (user) loadAppointments();
   }, [user]);
 
   return (
     <div className="card">
-      <h2>Doctor Appointments</h2>
+      <h2>My Appointments (Doctor)</h2>
+      {msg && <p className="kicker">{msg}</p>}
+
       <ul>
-        {appts.map(a => (
+        {appointments.map((a) => (
           <li key={a._id}>
-            Patient: {a.patientId?.name || a.patientId} | {new Date(a.date).toLocaleString()} | {a.status}
+            Patient: {a.patientId?.name || a.patientId} | 
+            Date: {new Date(a.date).toLocaleString()} | 
+            Status: {a.status}
           </li>
         ))}
       </ul>
