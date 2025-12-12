@@ -24,9 +24,7 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 // Add response interceptor to handle errors
@@ -43,7 +41,9 @@ api.interceptors.response.use(
   }
 );
 
+// =======================
 // Auth API endpoints
+// =======================
 export const authAPI = {
   // User registration
   signup: (userData) => api.post('/auth/signup', userData),
@@ -55,7 +55,9 @@ export const authAPI = {
   getProfile: () => api.get('/auth/profile'),
 };
 
+// =======================
 // Hospital API endpoints
+// =======================
 export const hospitalAPI = {
   // Get all hospitals with filters
   getAll: (params) => api.get('/hospitals', { params }),
@@ -70,7 +72,9 @@ export const hospitalAPI = {
   update: (id, hospitalData) => api.put(`/hospitals/${id}`, hospitalData),
 };
 
+// =======================
 // Doctor API endpoints
+// =======================
 export const doctorAPI = {
   // Get all doctors with filters
   getAll: (params) => api.get('/doctors', { params }),
@@ -85,4 +89,25 @@ export const doctorAPI = {
   update: (id, doctorData) => api.put(`/doctors/${id}`, doctorData),
 };
 
+// =======================
+// Appointment API endpoints
+// =======================
+export const appointmentsAPI = {
+  // Book an appointment (patient)
+  book: (payload) => api.post('/appointments/book', payload),
+
+  // Reschedule an appointment (patient)
+  reschedule: (id, payload) => api.patch(`/appointments/${id}/reschedule`, payload),
+
+  // Cancel an appointment (patient)
+  cancel: (id) => api.delete(`/appointments/${id}/cancel`),
+
+  // Get current user's appointments (patient)
+  mine: () => api.get('/appointments/mine'),
+
+  // Get all appointments for a doctor
+  doctor: (doctorId) => api.get(`/appointments/doctor/${doctorId}`),
+};
+
 export default api;
+
