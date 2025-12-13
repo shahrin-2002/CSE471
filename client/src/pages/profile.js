@@ -1,37 +1,82 @@
-import { useEffect, useState } from 'react'; 
-import axios from '../services/api';
-import { useAuth } from '../context/AuthContext'; 
+import { useEffect, useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
 
 export default function Profile() {
-  const { user, setUser } = useAuth(); 
+  const { user, setUser } = useAuth();
   const [form, setForm] = useState(user || {});
   const [msg, setMsg] = useState('');
 
-  useEffect(() => setForm(user || {}), [user]);
+  // Load profile from backend
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const { data } = await api.get('/users/me');
+        setForm(data.user || data);
+        setUser(data.user || data);
+      } catch (err) {
+        setMsg('Failed to load profile');
+      }
+    };
+    fetchProfile();
+  }, [setUser]);
 
   const save = async () => {
     setMsg('');
     try {
-      const { data } = await axios.put('/users/me', form);
+      const { data } = await api.put('/users/me', form);
       setUser(data.user || data);
-      setMsg('Profile updated');
+      setMsg('Profile updated successfully');
     } catch (err) {
       setMsg(err.response?.data?.error || 'Update failed');
     }
   };
 
-  if (!user) return null;
+  if (!user) return <div>Loading...</div>;
 
   return (
-    <div>
+    <div className="card">
       <h2>My Profile</h2>
-      {user.locked && <p style={{ color: 'red' }}>Your profile is locked. You cannot edit.</p>}
-      <input value={form.name || ''} onChange={e => setForm({ ...form, name: e.target.value })} disabled={user.locked} />
-      <input value={form.phone || ''} onChange={e => setForm({ ...form, phone: e.target.value })} disabled={user.locked} />
-      <input value={form.address || ''} onChange={e => setForm({ ...form, address: e.target.value })} disabled={user.locked} />
-      <input value={form.gender || ''} onChange={e => setForm({ ...form, gender: e.target.value })} disabled={user.locked} />
-      <button onClick={save} disabled={user.locked}>Save</button>
-      {msg && <p>{msg}</p>}
+      {user.locked && (
+        <p style={{ color: 'red' }}>Your profile is locked. You cannot edit.</p>
+      )}
+
+      <div className="row">
+        <input
+          className="input"
+          value={form.name || ''}
+          onChange={e => setForm({ ...form, name: e.target.value })}
+          placeholder="Name"
+          disabled={user.locked}
+        />
+        <input
+          className="input"
+          value={form.phone || ''}
+          onChange={e => setForm({ ...form, phone: e.target.value })}
+          placeholder="Phone"
+          disabled={user.locked}
+        />
+        <input
+          className="input"
+          value={form.address || ''}
+          onChange={e => setForm({ ...form, address: e.target.value })}
+          placeholder="Address"
+          disabled={user.locked}
+        />
+        <input
+          className="input"
+          value={form.gender || ''}
+          onChange={e => setForm({ ...form, gender: e.target.value })}
+          placeholder="Gender"
+          disabled={user.locked}
+        />
+      </div>
+
+      <button className="btn" onClick={save} disabled={user.locked}>
+        Save
+      </button>
+
+      {msg && <p className="kicker">{msg}</p>}
     </div>
   );
 }

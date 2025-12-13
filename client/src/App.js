@@ -12,6 +12,8 @@ import Dashboard from './pages/Dashboard';
 import Profile from './pages/profile';
 import Documents from './pages/Documents';
 import AdminDashboard from './pages/AdminDashboard';
+import PatientAppointments from './pages/PatientAppointments';   // ✅ new page
+import DoctorSlots from './pages/DoctorSlots';                   // ✅ new page
 import './App.css';
 
 // Protected Route Component
@@ -36,7 +38,7 @@ const PublicRoute = ({ children }) => {
   return !isAuthenticated ? children : <Navigate to="/dashboard" />;
 };
 
-// Role Guard Component (for admin-only routes)
+// Role Guard Component (for role-based routes)
 const RoleGuard = ({ role, children }) => {
   const { user } = useAuth();
   return user?.role === role ? children : <div>Access denied</div>;
@@ -103,6 +105,26 @@ function AppContent() {
           }
         />
 
+        {/* ✅ New appointment routes */}
+        <Route
+          path="/appointments"
+          element={
+            <ProtectedRoute>
+              <PatientAppointments />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/doctor/appointments"
+          element={
+            <ProtectedRoute>
+              <RoleGuard role="Doctor">
+                <DoctorSlots />
+              </RoleGuard>
+            </ProtectedRoute>
+          }
+        />
+
         {/* 404 - Catch all */}
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
@@ -119,4 +141,3 @@ function App() {
 }
 
 export default App;
-

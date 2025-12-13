@@ -57,11 +57,12 @@ const login = async (email, password) => {
       setToken(newToken);
       setUser(newUser);
 
-      return { success: true };
+      // ✅ Return user so Login.js can redirect based on role
+      return { success: true, user: newUser };
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || 'Login failed',
+        error: error.response?.data?.error || 'Login failed',
       };
     }
   };
@@ -97,7 +98,7 @@ const verifyOtp = async (email, otp) => {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || 'Signup failed',
+        error: error.response?.data?.error || 'Signup failed',
       };
     }
   };
@@ -123,7 +124,7 @@ const verifyOtp = async (email, otp) => {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || 'Failed to fetch profile',
+        error: error.response?.data?.error || 'Failed to fetch profile',
       };
     }
   };
@@ -139,6 +140,7 @@ const value = {
     logout,
     getProfile,
     isAuthenticated: !!token,
+    setUser, // expose setUser for profile updates
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

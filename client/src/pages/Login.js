@@ -29,14 +29,13 @@ const Login = () => {
       ...formData,
       [e.target.name]: e.target.value,
     });
-    // Clear error when user starts typing
     if (error) setError('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    
+
     // Basic validation
     if (step === 'credentials' && (!formData.email || !formData.password)) {
       setError('Please fill in all fields');
@@ -53,12 +52,17 @@ const Login = () => {
       if (step === 'credentials') {
         // Step 1: Submit Email/Password
         const result = await login(formData.email, formData.password);
-        
+
         if (result.requiresOtp) {
           setStep('otp'); // Switch UI to OTP mode
         } else if (result.success) {
-          // Standard login (if 2FA disabled)
-          navigate('/dashboard');
+          // Redirect based on role
+          const role = result.user?.role;
+          if (role === 'Hospital_Admin') {
+            navigate('/admin');
+          } else {
+            navigate('/dashboard');
+          }
         } else {
           setError(result.error);
         }
@@ -84,7 +88,7 @@ const Login = () => {
       <div className="auth-header">
         <button className="hamburger-menu">☰</button>
         <h1>HealthConnect</h1>
-        <div></div> {/* Spacer for flex layout */}
+        <div></div>
       </div>
 
       {/* Navigation */}
