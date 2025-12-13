@@ -1,6 +1,6 @@
 /**
  * Login Page Component
- * Matches the login.jpeg design
+ * Matches the login.jpeg design with 2FA support
  */
 
 import React, { useState } from 'react';
@@ -10,11 +10,15 @@ import '../styles/Auth.css';
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, verifyOtp } = useAuth();
+
+  // State to track if we are in the OTP step
+  const [step, setStep] = useState('credentials'); // 'credentials' or 'otp'
 
   const [formData, setFormData] = useState({
     email: '',
     password: '',
+    otp: ''
   });
 
   const [error, setError] = useState('');
@@ -32,27 +36,44 @@ const Login = () => {
     e.preventDefault();
     setError('');
 
-    if (!formData.email || !formData.password) {
+    // Basic validation
+    if (step === 'credentials' && (!formData.email || !formData.password)) {
       setError('Please fill in all fields');
       return;
+    }
+    if (step === 'otp' && !formData.otp) {
+        setError('Please enter the code');
+        return;
     }
 
     setLoading(true);
 
     try {
-      const result = await login(formData.email, formData.password);
+      if (step === 'credentials') {
+        // Step 1: Submit Email/Password
+        const result = await login(formData.email, formData.password);
 
-      if (result.success) {
-        const role = result.user.role;
-
-        // Redirect based on role
-        if (role === 'Hospital_Admin') {
-          navigate('/admin');
+        if (result.requiresOtp) {
+          setStep('otp'); // Switch UI to OTP mode
+        } else if (result.success) {
+          // Redirect based on role
+          const role = result.user?.role;
+          if (role === 'Hospital_Admin') {
+            navigate('/admin');
+          } else {
+            navigate('/dashboard');
+          }
         } else {
-          navigate('/dashboard');
+          setError(result.error);
         }
       } else {
-        setError(result.error);
+        // Step 2: Submit OTP
+        const result = await verifyOtp(formData.email, formData.otp);
+        if (result.success) {
+          navigate('/dashboard');
+        } else {
+          setError(result.error);
+        }
       }
     } catch (err) {
       setError('An unexpected error occurred');
@@ -94,49 +115,97 @@ const Login = () => {
       {/* Main Content */}
       <div className="auth-content">
         <div className="auth-card">
-          <div className="auth-link-top">
-            Don't have an account? <Link to="/register">Sign Up</Link>
-          </div>
+          {/* Sign Up Link (Only show in credentials step) */}
+          {step === 'credentials' && (
+            <div className="auth-link-top">
+              Don't have an account? <Link to="/register">Sign Up</Link>
+            </div>
+          )}
 
-          <h2>Log In</h2>
+          <h2>{step === 'credentials' ? 'Log In' : 'Verification'}</h2>
+
+          {/* OTP Instruction Text */}
+          {step === 'otp' && (
+            <p style={{textAlign: 'center', fontSize: '14px', marginBottom: '20px', color: '#666'}}>
+              We sent a code to <strong>{formData.email}</strong>
+            </p>
+          )}
 
           {error && <div className="error-message">{error}</div>}
 
           <form onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label htmlFor="email">Email</label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                placeholder="your@example.com"
-                value={formData.email}
-                onChange={handleChange}
-                required
-              />
-            </div>
+            {step === 'credentials' ? (
+              // STEP 1: EMAIL & PASSWORD
+              <>
+                <div className="form-group">
+                  <label htmlFor="email">Email</label>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    placeholder="your@example.com"
+                    value={formData.email}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
 
-            <div className="form-group">
-              <label htmlFor="password">Password</label>
-              <input
-                type="password"
-                id="password"
-                name="password"
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={handleChange}
-                required
-              />
-            </div>
+                <div className="form-group">
+                  <label htmlFor="password">Password</label>
+                  <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    placeholder="••••••••"
+                    value={formData.password}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+              </>
+            ) : (
+              // STEP 2: OTP INPUT
+              <div className="form-group">
+                <label htmlFor="otp">Enter 6-digit Code</label>
+                <input
+                  type="text"
+                  id="otp"
+                  name="otp"
+                  placeholder="123456"
+                  value={formData.otp}
+                  onChange={handleChange}
+                  required
+                  maxLength="6"
+                  autoFocus
+                  style={{ letterSpacing: '5px', textAlign: 'center', fontSize: '18px' }}
+                />
+              </div>
+            )}
 
             <button
               type="submit"
               className="btn-submit btn-submit-dark"
               disabled={loading}
             >
-              {loading ? 'Signing In...' : 'Sign In'}
+              {loading 
+                ? 'Processing...' 
+                : (step === 'credentials' ? 'Sign In' : 'Verify Code')
+              }
             </button>
           </form>
+
+          {/* Back button for OTP step */}
+          {step === 'otp' && (
+            <div style={{textAlign: 'center', marginTop: '10px'}}>
+               <button 
+                 type="button" 
+                 onClick={() => setStep('credentials')}
+                 style={{background:'none', border:'none', color:'#2B2B2B', textDecoration:'underline', cursor:'pointer'}}
+               >
+                 Back to Login
+               </button>
+            </div>
+          )}
 
           <div className="forgot-password">
             <Link to="/forgot-password">Forgot password?</Link>
@@ -148,4 +217,3 @@ const Login = () => {
 };
 
 export default Login;
-

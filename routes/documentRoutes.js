@@ -2,7 +2,8 @@ const router = require('express').Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const auth = require('../middleware/auth');
+// FIX: Destructure verifyToken
+const { verifyToken } = require('../middleware/auth');
 const DocumentController = require('../controllers/documentController');
 
 // Ensure uploads directory exists
@@ -21,13 +22,14 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-// Upload new document
-router.post('/', auth, upload.single('file'), (req, res) => DocumentController.upload(req, res));
+// FIX: Use verifyToken instead of auth
+router.post('/', verifyToken, upload.single('file'), (req, res) => DocumentController.upload(req, res));
 
-// Preview document file
+// Preview document file (Public or Protected? Usually protected, but preview might be public if obfuscated)
+// Keeping it public as per original code, but often this should be protected too.
 router.get('/preview/:filename', (req, res) => DocumentController.preview(req, res));
 
-// Delete document
-router.delete('/:id', auth, (req, res) => DocumentController.remove(req, res));
+// FIX: Use verifyToken instead of auth
+router.delete('/:id', verifyToken, (req, res) => DocumentController.remove(req, res));
 
 module.exports = router;

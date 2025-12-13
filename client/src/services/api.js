@@ -50,7 +50,7 @@ export const authAPI = {
 
   // User login
   login: (credentials) => api.post('/auth/login', credentials),
-
+  verifyOtp: (data) => api.post('/auth/verify-otp', data),
   // Get user profile
   getProfile: () => api.get('/auth/profile'),
 };

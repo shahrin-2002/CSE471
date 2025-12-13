@@ -29,6 +29,7 @@ const userSchema = new mongoose.Schema({
     enum: ['patient', 'doctor', 'admin'],
     default: 'patient'
   },
+  
   phone: {
     type: String,
     default: null,
@@ -47,6 +48,14 @@ const userSchema = new mongoose.Schema({
   date_of_birth: {
     type: Date,
     default: null
+  },
+otp: { 
+    type: String, 
+    default: null 
+  },
+  otpExpires: { 
+    type: Date, 
+    default: null 
   }
 }, {
   timestamps: true,
