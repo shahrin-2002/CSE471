@@ -4,6 +4,8 @@
 
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const sendEmail = require('../utils/emailService');
+const crypto = require('crypto'); // Built-in Node module
 
 class AuthController {
   /**
@@ -92,59 +94,48 @@ class AuthController {
     try {
       const { email, password } = req.body;
 
-      // Validation
+      // 1. Validate input
       if (!email || !password) {
-        return res.status(400).json({
-          error: 'Validation Error',
-          message: 'Email and password are required'
-        });
+        return res.status(400).json({ error: 'Validation Error', message: 'Email and password required' });
       }
 
-      // Find user by email
+      // 2. Find user
       const user = await User.findByEmail(email);
       if (!user) {
-        return res.status(401).json({
-          error: 'Authentication Failed',
-          message: 'Invalid email or password'
-        });
+        return res.status(401).json({ error: 'Auth Failed', message: 'Invalid credentials' });
       }
 
-      // Verify password using the comparePassword method
-      const isPasswordValid = await user.comparePassword(password);
-      if (!isPasswordValid) {
-        return res.status(401).json({
-          error: 'Authentication Failed',
-          message: 'Invalid email or password'
-        });
+      // 3. Verify password
+      const isMatch = await user.comparePassword(password);
+      if (!isMatch) {
+        return res.status(401).json({ error: 'Auth Failed', message: 'Invalid credentials' });
       }
 
-      // Generate JWT token
-      const token = jwt.sign(
-        {
-          id: user._id,
-          email: user.email,
-          name: user.name,
-          role: user.role
-        },
-        process.env.JWT_SECRET,
-        { expiresIn: '24h' }
+      // 4. Generate OTP (6 digits)
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+      // 5. Save OTP to DB (valid for 10 minutes)
+      user.otp = otp;
+      user.otpExpires = Date.now() + 10 * 60 * 1000; 
+      await user.save();
+
+      // 6. Send Email
+      await sendEmail(
+        user.email,
+        'Your Login Code',
+        `Your verification code is: ${otp}. It expires in 10 minutes.`
       );
 
-      // Return token and user info (without password)
-      const userResponse = user.toJSON();
-
+      // 7. Respond to client (Tell them to check their email)
       res.status(200).json({
-        message: 'Login successful',
-        token,
-        user: userResponse
+        message: 'OTP sent to email',
+        requiresOtp: true,
+        email: user.email // sending back email to help frontend state
       });
 
     } catch (error) {
       console.error('Login error:', error);
-      res.status(500).json({
-        error: 'Internal Server Error',
-        message: 'An error occurred during login'
-      });
+      res.status(500).json({ error: 'Server Error', message: error.message });
     }
   }
 
@@ -177,6 +168,48 @@ class AuthController {
         error: 'Internal Server Error',
         message: 'An error occurred while fetching profile'
       });
+    }
+  }
+
+  async verifyOtp(req, res) {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({ error: 'Validation Error', message: 'Email and OTP required' });
+    }
+
+    const user = await User.findByEmail(email);
+    if (!user) {
+      return res.status(404).json({ error: 'Not Found', message: 'User not found' });
+    }
+
+    // Check if OTP matches and hasn't expired
+    if (user.otp !== otp || user.otpExpires < Date.now()) {
+      return res.status(400).json({ error: 'Invalid OTP', message: 'Code is invalid or expired' });
+    }
+
+    // Clear OTP fields
+    user.otp = null;
+    user.otpExpires = null;
+    await user.save();
+
+    // Generate Token (This is the logic that used to be in login)
+    const token = jwt.sign(
+      { id: user._id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.status(200).json({
+      message: 'Login successful',
+      token,
+      user: user.toJSON()
+    });
+
+  } catch (error) {
+    console.error('OTP Verify error:', error);
+    res.status(500).json({ error: 'Server Error', message: error.message });
     }
   }
 }

@@ -33,16 +33,27 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // Login function
-  const login = async (email, password) => {
+// Replace the existing login function with this:
+const login = async (email, password) => {
     try {
       const response = await authAPI.login({ email, password });
+      
+      // Check if the backend is asking for an OTP
+      if (response.data.requiresOtp) {
+        return { 
+          success: false, 
+          requiresOtp: true, 
+          email: response.data.email 
+        };
+      }
+
+      // Standard Login (Fallback or if 2FA is disabled)
+      // Note: Fixed typo from 'nVToken' to 'token'
       const { token: newToken, user: newUser } = response.data;
 
-      // Save to localStorage
       localStorage.setItem('token', newToken);
       localStorage.setItem('user', JSON.stringify(newUser));
 
-      // Update state
       setToken(newToken);
       setUser(newUser);
 
@@ -51,6 +62,27 @@ export const AuthProvider = ({ children }) => {
       return {
         success: false,
         error: error.response?.data?.message || 'Login failed',
+      };
+    }
+  };
+
+// Add a new function to the context for verifying OTP
+const verifyOtp = async (email, otp) => {
+    try {
+      const response = await authAPI.verifyOtp({ email, otp });
+      const { token: newToken, user: newUser } = response.data;
+
+      localStorage.setItem('token', newToken);
+      localStorage.setItem('user', JSON.stringify(newUser));
+      
+      setToken(newToken);
+      setUser(newUser);
+
+      return { success: true };
+    } catch (error) {
+      return { 
+        success: false, 
+        error: error.response?.data?.message || 'Verification failed' 
       };
     }
   };
@@ -96,11 +128,13 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const value = {
+const value = {
     user,
+    setUser,
     token,
     loading,
     login,
+    verifyOtp, 
     signup,
     logout,
     getProfile,

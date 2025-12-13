@@ -1,9 +1,9 @@
-import { useEffect, useState, useContext } from 'react';
+import { useEffect, useState } from 'react'; 
 import axios from '../services/api';
-import { AuthContext } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext'; 
 
 export default function Profile() {
-  const { user, setUser } = useContext(AuthContext);
+  const { user, setUser } = useAuth(); 
   const [form, setForm] = useState(user || {});
   const [msg, setMsg] = useState('');
 
