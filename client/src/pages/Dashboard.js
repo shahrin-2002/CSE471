@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import '../styles/Auth.css';
 
@@ -30,6 +30,13 @@ const Dashboard = () => {
         <div className="nav-logo">
           <span>🏥</span>
         </div>
+        <ul className="nav-links">
+          <li><Link to="/hospitals">Hospitals</Link></li>
+          <li><Link to="/doctors">Doctors</Link></li>
+          <li><Link to="/appointments">Appointments</Link></li>
+          <li><Link to="/profile">Profile</Link></li>
+          <li><Link to="/documents">Documents</Link></li>
+        </ul>
         <div className="nav-buttons">
           <button className="btn-dark" onClick={handleLogout}>
             Logout
@@ -61,6 +68,33 @@ const Dashboard = () => {
                 )}
                 {user.phone && <p><strong>Phone:</strong> {user.phone}</p>}
                 {user.address && <p><strong>Address:</strong> {user.address}</p>}
+              </div>
+
+              {/* Quick Links */}
+              <div style={{ marginTop: '30px' }}>
+                <h3 style={{ marginBottom: '15px', color: '#2B2B2B' }}>Quick Links</h3>
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                  <Link to="/hospitals">
+                    <button className="btn-submit" style={{ padding: '10px 20px' }}>
+                      🏥 Find Hospitals
+                    </button>
+                  </Link>
+                  <Link to="/doctors">
+                    <button className="btn-submit" style={{ padding: '10px 20px' }}>
+                      👨‍⚕️ Find Doctors
+                    </button>
+                  </Link>
+                  <Link to="/appointments">
+                    <button className="btn-submit" style={{ padding: '10px 20px' }}>
+                      📅 My Appointments
+                    </button>
+                  </Link>
+                  <Link to="/documents">
+                    <button className="btn-submit" style={{ padding: '10px 20px' }}>
+                      📄 My Documents
+                    </button>
+                  </Link>
+                </div>
               </div>
             </div>
           )}

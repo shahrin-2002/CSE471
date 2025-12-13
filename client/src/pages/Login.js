@@ -4,13 +4,17 @@
  */
 
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import '../styles/Auth.css';
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, verifyOtp } = useAuth();
+
+  // Get success message from registration redirect
+  const successMessage = location.state?.message;
 
   // State to track if we are in the OTP step
   const [step, setStep] = useState('credentials'); // 'credentials' or 'otp'
@@ -131,6 +135,7 @@ const Login = () => {
             </p>
           )}
 
+          {successMessage && <div className="success-message">{successMessage}</div>}
           {error && <div className="error-message">{error}</div>}
 
           <form onSubmit={handleSubmit}>

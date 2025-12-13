@@ -92,9 +92,8 @@ const verifyOtp = async (email, otp) => {
   const signup = async (userData) => {
     try {
       const response = await authAPI.signup(userData);
-
-      // After successful signup, automatically login
-      return await login(userData.email, userData.password);
+      // Don't auto-login - let user go to login page for OTP verification
+      return { success: true, message: 'Account created successfully' };
     } catch (error) {
       return {
         success: false,

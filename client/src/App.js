@@ -12,8 +12,10 @@ import Dashboard from './pages/Dashboard';
 import Profile from './pages/profile';
 import Documents from './pages/Documents';
 import AdminDashboard from './pages/AdminDashboard';
-import PatientAppointments from './pages/PatientAppointments';   // ✅ new page
-import DoctorSlots from './pages/DoctorSlots';                   // ✅ new page
+import PatientAppointments from './pages/PatientAppointments';
+import DoctorSlots from './pages/DoctorSlots';
+import HospitalSearch from './pages/HospitalSearch';
+import DoctorSearch from './pages/DoctorSearch';
 import './App.css';
 
 // Protected Route Component
@@ -105,7 +107,11 @@ function AppContent() {
           }
         />
 
-        {/* ✅ New appointment routes */}
+        {/* Hospital and Doctor Search */}
+        <Route path="/hospitals" element={<HospitalSearch />} />
+        <Route path="/doctors" element={<DoctorSearch />} />
+
+        {/* Appointment routes */}
         <Route
           path="/appointments"
           element={

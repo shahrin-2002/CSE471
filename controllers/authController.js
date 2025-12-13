@@ -111,12 +111,28 @@ class AuthController {
         return res.status(401).json({ error: 'Auth Failed', message: 'Invalid credentials' });
       }
 
+      // Check if OTP is disabled (SKIP_OTP=true in .env)
+      if (process.env.SKIP_OTP === 'true') {
+        // Skip OTP - directly generate token and return
+        const token = jwt.sign(
+          { id: user._id, email: user.email, role: user.role },
+          process.env.JWT_SECRET,
+          { expiresIn: '24h' }
+        );
+
+        return res.status(200).json({
+          message: 'Login successful',
+          token,
+          user: user.toJSON()
+        });
+      }
+
       // 4. Generate OTP (6 digits)
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
       // 5. Save OTP to DB (valid for 10 minutes)
       user.otp = otp;
-      user.otpExpires = Date.now() + 10 * 60 * 1000; 
+      user.otpExpires = Date.now() + 10 * 60 * 1000;
       await user.save();
 
       // 6. Send Email
