@@ -1,11 +1,14 @@
 /**
  * Auth Controller - Handles authentication business logic
+ * Updated: Automatically creates Doctor Profile upon registration
  */
 
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+// ✅ NEW IMPORTS
+const Doctor = require('../models/Doctor');
+const Hospital = require('../models/Hospital');
 const sendEmail = require('../utils/emailService');
-const crypto = require('crypto'); // Built-in Node module
 
 class AuthController {
   /**
@@ -41,7 +44,7 @@ class AuthController {
         });
       }
 
-      // Create user (password will be hashed automatically by the pre-save hook)
+      // Create user
       const newUser = await User.create({
         name,
         email,
@@ -52,6 +55,44 @@ class AuthController {
         gender,
         date_of_birth
       });
+
+      // ✅ AUTOMATIC DOCTOR PROFILE CREATION
+      if (role.toLowerCase() === 'doctor') {
+        try {
+          // 1. Assign to a default hospital (First one found in DB)
+          let hospital = await Hospital.findOne();
+          
+          // Edge case: If no hospitals exist yet, create a dummy one
+          if (!hospital) {
+            hospital = await Hospital.create({
+              name: "General City Hospital",
+              city: "Dhaka",
+              address: "123 Main St",
+              phone: "555-0100",
+              email: "admin@hospital.com"
+            });
+          }
+
+          // 2. Create the linked Doctor Profile
+          await Doctor.create({
+            user_id: newUser._id,
+            hospital_id: hospital._id,
+            name: newUser.name,
+            specialization: "General Physician", // Default specialization
+            consultation_fee: 500,               // Default fee
+            availability_status: "Available",
+            phone: newUser.phone,
+            email: newUser.email,
+            slotDuration: 30,                    // Default slot duration
+            availability: []                     // Empty schedule initially
+          });
+
+          console.log(`✅ Auto-created Doctor Profile for ${newUser.name}`);
+        } catch (docError) {
+          console.error('Failed to auto-create doctor profile:', docError);
+          // Note: We don't stop the registration here, but we log the error.
+        }
+      }
 
       // Convert to JSON to remove password
       const userResponse = newUser.toJSON();
@@ -64,7 +105,6 @@ class AuthController {
     } catch (error) {
       console.error('Signup error:', error);
 
-      // Handle Mongoose validation errors
       if (error.name === 'ValidationError') {
         return res.status(400).json({
           error: 'Validation Error',
@@ -72,7 +112,6 @@ class AuthController {
         });
       }
 
-      // Handle duplicate email error
       if (error.code === 11000) {
         return res.status(409).json({
           error: 'Email Already Exists',
@@ -94,26 +133,22 @@ class AuthController {
     try {
       const { email, password } = req.body;
 
-      // 1. Validate input
       if (!email || !password) {
         return res.status(400).json({ error: 'Validation Error', message: 'Email and password required' });
       }
 
-      // 2. Find user
       const user = await User.findByEmail(email);
       if (!user) {
         return res.status(401).json({ error: 'Auth Failed', message: 'Invalid credentials' });
       }
 
-      // 3. Verify password
       const isMatch = await user.comparePassword(password);
       if (!isMatch) {
         return res.status(401).json({ error: 'Auth Failed', message: 'Invalid credentials' });
       }
 
-      // Check if OTP is disabled (SKIP_OTP=true in .env)
+      // Check if OTP is disabled
       if (process.env.SKIP_OTP === 'true') {
-        // Skip OTP - directly generate token and return
         const token = jwt.sign(
           { id: user._id, email: user.email, role: user.role },
           process.env.JWT_SECRET,
@@ -127,26 +162,23 @@ class AuthController {
         });
       }
 
-      // 4. Generate OTP (6 digits)
+      // Generate OTP
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-      // 5. Save OTP to DB (valid for 10 minutes)
       user.otp = otp;
       user.otpExpires = Date.now() + 10 * 60 * 1000;
       await user.save();
 
-      // 6. Send Email
       await sendEmail(
         user.email,
         'Your Login Code',
         `Your verification code is: ${otp}. It expires in 10 minutes.`
       );
 
-      // 7. Respond to client (Tell them to check their email)
       res.status(200).json({
         message: 'OTP sent to email',
         requiresOtp: true,
-        email: user.email // sending back email to help frontend state
+        email: user.email
       });
 
     } catch (error) {
@@ -161,73 +193,61 @@ class AuthController {
   async getProfile(req, res) {
     try {
       const userId = req.user.id;
-
       const user = await User.findById(userId);
       if (!user) {
-        return res.status(404).json({
-          error: 'User Not Found',
-          message: 'User profile not found'
-        });
+        return res.status(404).json({ error: 'User Not Found', message: 'User profile not found' });
       }
-
-      // Convert to JSON to remove password
-      const userResponse = user.toJSON();
-
-      res.status(200).json({
-        message: 'Profile retrieved successfully',
-        user: userResponse
-      });
-
+      res.status(200).json({ message: 'Profile retrieved successfully', user: user.toJSON() });
     } catch (error) {
       console.error('Get profile error:', error);
-      res.status(500).json({
-        error: 'Internal Server Error',
-        message: 'An error occurred while fetching profile'
-      });
+      res.status(500).json({ error: 'Internal Server Error', message: 'An error occurred while fetching profile' });
     }
   }
 
+  /**
+   * Verify OTP
+   */
   async verifyOtp(req, res) {
-  try {
-    const { email, otp } = req.body;
+    try {
+      const { email, otp } = req.body;
 
-    if (!email || !otp) {
-      return res.status(400).json({ error: 'Validation Error', message: 'Email and OTP required' });
-    }
+      if (!email || !otp) {
+        return res.status(400).json({ error: 'Validation Error', message: 'Email and OTP required' });
+      }
 
-    const user = await User.findByEmail(email);
-    if (!user) {
-      return res.status(404).json({ error: 'Not Found', message: 'User not found' });
-    }
+      const user = await User.findByEmail(email);
+      if (!user) {
+        return res.status(404).json({ error: 'Not Found', message: 'User not found' });
+      }
 
-    // Check if OTP matches and hasn't expired
-    if (user.otp !== otp || user.otpExpires < Date.now()) {
-      return res.status(400).json({ error: 'Invalid OTP', message: 'Code is invalid or expired' });
-    }
+      if (user.otp !== otp || user.otpExpires < Date.now()) {
+        return res.status(400).json({ error: 'Invalid OTP', message: 'Code is invalid or expired' });
+      }
 
-    // Clear OTP fields
-    user.otp = null;
-    user.otpExpires = null;
-    await user.save();
+      user.otp = null;
+      user.otpExpires = null;
+      await user.save();
 
-    // Generate Token (This is the logic that used to be in login)
-    const token = jwt.sign(
-      { id: user._id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '24h' }
-    );
+      const token = jwt.sign(
+        { id: user._id, email: user.email, role: user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: '24h' }
+      );
 
-    res.status(200).json({
-      message: 'Login successful',
-      token,
-      user: user.toJSON()
-    });
+      res.status(200).json({
+        message: 'Login successful',
+        token,
+        user: user.toJSON()
+      });
 
-  } catch (error) {
-    console.error('OTP Verify error:', error);
-    res.status(500).json({ error: 'Server Error', message: error.message });
+    } catch (error) {
+      console.error('OTP Verify error:', error);
+      res.status(500).json({ error: 'Server Error', message: error.message });
     }
   }
 }
 
+module.exports = new AuthController(); // Ensure you are exporting an instance or class correctly based on your route usage
+// Note: Your original file exported the CLASS. If your routes do `new AuthController()`, keep it as `module.exports = AuthController;`
+// Based on your previous file content:
 module.exports = AuthController;
