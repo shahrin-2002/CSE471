@@ -1,5 +1,6 @@
 /**
  * Doctor Search Page Component
+ * Updated with Member-2 Feature: Real-time Slot Availability
  */
 
 import React, { useState, useEffect } from 'react';
@@ -23,6 +24,11 @@ const DoctorSearch = () => {
   const [offset, setOffset] = useState(0);
   const limit = 10;
 
+  // ✅ Member-2 New State: Availability Logic
+  const [selectedDate, setSelectedDate] = useState('');
+  const [availableSlots, setAvailableSlots] = useState([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+
   // Fetch doctors
   const fetchDoctors = async (search = '') => {
     setLoading(true);
@@ -38,7 +44,7 @@ const DoctorSearch = () => {
 
       // Auto-select first doctor if available
       if (data.length > 0 && !selectedDoctor) {
-        fetchDoctorDetails(data[0]._id || data[0].id);
+        handleSelectDoctor(data[0]); // Changed to use the handler to reset slots
       }
     } catch (err) {
       setError('Failed to load doctors');
@@ -58,9 +64,33 @@ const DoctorSearch = () => {
     }
   };
 
+  // ✅ Member-2 Feature: Fetch Slots for Selected Date
+  const fetchSlots = async (date) => {
+    if (!selectedDoctor || !date) return;
+    setLoadingSlots(true);
+    try {
+      const id = selectedDoctor._id || selectedDoctor.id;
+      const response = await doctorAPI.getSlots(id, date);
+      setAvailableSlots(response.data.slots);
+    } catch (err) {
+      console.error("Error fetching slots", err);
+      setAvailableSlots([]);
+    } finally {
+      setLoadingSlots(false);
+    }
+  };
+
+  // ✅ Member-2 Feature: Handle Date Selection
+  const handleDateChange = (e) => {
+    const date = e.target.value;
+    setSelectedDate(date);
+    fetchSlots(date);
+  };
+
   // Initial load
   useEffect(() => {
     fetchDoctors();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [offset]);
 
   // Handle search
@@ -72,6 +102,9 @@ const DoctorSearch = () => {
 
   // Handle doctor selection
   const handleSelectDoctor = (doctor) => {
+    // Reset slot state when switching doctors
+    setSelectedDate('');
+    setAvailableSlots([]);
     fetchDoctorDetails(doctor._id || doctor.id);
   };
 
@@ -194,17 +227,72 @@ const DoctorSearch = () => {
                     </div>
 
                     <p className="details-instruction">
-                      Please select a date and time of your visit according to the
-                      available slots
+                      Please select a date and time to see availability.
                     </p>
 
+                    {/* ✅ Member-2 Feature: Dynamic Booking Form */}
                     <div className="booking-form">
                       <div className="form-field full-width">
                         <label>Select Date</label>
-                        <input type="date" className="form-select" />
+                        <input 
+                          type="date" 
+                          className="form-select"
+                          min={new Date().toISOString().split('T')[0]}
+                          value={selectedDate}
+                          onChange={handleDateChange}
+                        />
                       </div>
 
-                      <button className="btn-booking">Book Appointment</button>
+                      {/* Slots Display Section */}
+                      {selectedDate && (
+                        <div className="slots-container" style={{ marginTop: '15px' }}>
+                          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#2B2B2B' }}>
+                            Available Time Slots
+                          </label>
+                          
+                          {loadingSlots ? (
+                            <div style={{ color: '#666', fontSize: '0.9rem', padding: '10px' }}>
+                              Checking doctor's schedule...
+                            </div>
+                          ) : availableSlots.length > 0 ? (
+                            <div style={{ 
+                              display: 'grid', 
+                              gridTemplateColumns: 'repeat(3, 1fr)', 
+                              gap: '10px',
+                              maxHeight: '200px',
+                              overflowY: 'auto'
+                            }}>
+                              {availableSlots.map((slot) => (
+                                <button 
+                                  key={slot}
+                                  className="btn-outline"
+                                  style={{ 
+                                    padding: '8px', 
+                                    fontSize: '0.85rem', 
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    textAlign: 'center'
+                                  }}
+                                  onClick={() => alert(`You selected ${slot}. Proceed to booking?`)}
+                                >
+                                  {slot}
+                                </button>
+                              ))}
+                            </div>
+                          ) : (
+                            <div style={{ color: '#dc3545', fontSize: '0.9rem', marginTop: '5px' }}>
+                              No slots available for this date.
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Only show 'Book Appointment' if a slot logic was fully implemented (Member-3) */}
+                      {!selectedDate && (
+                        <button className="btn-booking" disabled style={{ opacity: 0.5, marginTop: '15px' }}>
+                          Select Date First
+                        </button>
+                      )}
                     </div>
 
                     <div className="about-section">

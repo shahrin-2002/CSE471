@@ -1,5 +1,6 @@
 /**
  * Dashboard Page - After successful login
+ * Updated to include Doctor Availability Button
  */
 
 import React from 'react';
@@ -15,6 +16,9 @@ const Dashboard = () => {
     logout();
     navigate('/login');
   };
+
+  // Helper to check if user is a doctor (handles case sensitivity)
+  const isDoctor = user?.role?.toLowerCase() === 'doctor';
 
   return (
     <div className="auth-container">
@@ -74,6 +78,16 @@ const Dashboard = () => {
               <div style={{ marginTop: '30px' }}>
                 <h3 style={{ marginBottom: '15px', color: '#2B2B2B' }}>Quick Links</h3>
                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                  
+                  {/* ✅ NEW BUTTON: Manage Availability (Only for Doctors) */}
+                  {isDoctor && (
+                    <Link to="/doctor/schedule">
+                      <button className="btn-submit" style={{ padding: '10px 20px', backgroundColor: '#2B2B2B', color: 'white' }}>
+                        🕒 Manage Availability
+                      </button>
+                    </Link>
+                  )}
+
                   <Link to="/hospitals">
                     <button className="btn-submit" style={{ padding: '10px 20px' }}>
                       🏥 Find Hospitals

@@ -87,6 +87,10 @@ export const doctorAPI = {
 
   // Update doctor (admin only)
   update: (id, doctorData) => api.put(`/doctors/${id}`, doctorData),
+
+  getSlots: (doctorId, date) => api.get(`/doctors/${doctorId}/slots?date=${date}`),
+  updateAvailability: (data) => api.put('/doctors/availability/me', data),
+  getMyProfile: () => api.get('/doctors/profile/me'),
 };
 
 // =======================

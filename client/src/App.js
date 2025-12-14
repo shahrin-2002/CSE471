@@ -1,6 +1,6 @@
 /**
  * Main App Component
- * Sets up routing and auth context
+ * Updated with Member-2 Feature: Doctor Schedule Management Route
  */
 
 import React from 'react';
@@ -9,13 +9,15 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
-import Profile from './pages/profile';
+import Profile from './pages/Profile';
 import Documents from './pages/Documents';
 import AdminDashboard from './pages/AdminDashboard';
 import PatientAppointments from './pages/PatientAppointments';
 import DoctorSlots from './pages/DoctorSlots';
 import HospitalSearch from './pages/HospitalSearch';
 import DoctorSearch from './pages/DoctorSearch';
+// ✅ Member-2: Import the new Manage Schedule page
+import ManageSchedule from './pages/ManageSchedule';
 import './App.css';
 
 // Protected Route Component
@@ -43,6 +45,7 @@ const PublicRoute = ({ children }) => {
 // Role Guard Component (for role-based routes)
 const RoleGuard = ({ role, children }) => {
   const { user } = useAuth();
+  // Allow if user matches role, otherwise deny
   return user?.role === role ? children : <div>Access denied</div>;
 };
 
@@ -126,6 +129,18 @@ function AppContent() {
             <ProtectedRoute>
               <RoleGuard role="Doctor">
                 <DoctorSlots />
+              </RoleGuard>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ✅ Member-2: Doctor Schedule Management Route */}
+        <Route
+          path="/doctor/schedule"
+          element={
+            <ProtectedRoute>
+              <RoleGuard role="doctor">
+                <ManageSchedule />
               </RoleGuard>
             </ProtectedRoute>
           }

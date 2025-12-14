@@ -1,5 +1,6 @@
 /**
  * Doctor Routes - MongoDB Version
+ * Combined: Existing Search/Filter + New Availability Logic
  */
 
 const express = require('express');
@@ -61,6 +62,92 @@ router.get('/', async (req, res) => {
 });
 
 /**
+ * GET /api/doctors/profile/me
+ * Get logged-in doctor's own profile (for Manage Schedule page)
+ * Placed BEFORE /:id to prevent conflict
+ */
+router.get('/profile/me', verifyToken, checkRole('doctor'), async (req, res) => {
+  try {
+    const doctor = await Doctor.findOne({ user_id: req.user.id });
+    if (!doctor) return res.status(404).json({ error: 'Doctor profile not found' });
+    res.json(doctor);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * PUT /api/doctors/availability/me
+ * Update logged-in doctor's availability
+ */
+router.put('/availability/me', verifyToken, checkRole('doctor'), async (req, res) => {
+  try {
+    const { slotDuration, availability } = req.body;
+    
+    // Find doctor linked to the logged-in user
+    const doctor = await Doctor.findOne({ user_id: req.user.id });
+    
+    if (!doctor) {
+      return res.status(404).json({ error: 'Doctor profile not found. Please contact admin to link your profile.' });
+    }
+
+    doctor.slotDuration = slotDuration;
+    doctor.availability = availability;
+    await doctor.save();
+
+    res.json({ message: 'Schedule updated successfully', doctor });
+  } catch (error) {
+    console.error('Update availability error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/doctors/:id/slots
+ * Get available slots for a specific date
+ */
+router.get('/:id/slots', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { date } = req.query; // Format YYYY-MM-DD
+    
+    if (!date) return res.status(400).json({ error: 'Date is required' });
+
+    const doctor = await Doctor.findById(id);
+    if (!doctor) return res.status(404).json({ error: 'Doctor not found' });
+
+    // 1. Find the day of the week
+    const dayOfWeek = new Date(date).toLocaleDateString('en-US', { weekday: 'long' });
+    
+    // 2. Check if doctor works on this day
+    const schedule = doctor.availability?.find(s => s.day === dayOfWeek && s.isAvailable);
+    
+    if (!schedule) {
+      return res.json({ date, slots: [], message: 'Doctor is not available on this day' });
+    }
+
+    // 3. Generate slots
+    const slots = [];
+    const duration = doctor.slotDuration || 30; // Default to 30 mins if undefined
+    
+    let current = new Date(`${date}T${schedule.startTime}`);
+    const end = new Date(`${date}T${schedule.endTime}`);
+
+    while (current < end) {
+      // Format as HH:MM
+      const timeString = current.toTimeString().slice(0, 5);
+      slots.push(timeString);
+      current.setMinutes(current.getMinutes() + duration);
+    }
+    
+    res.json({ date, slots });
+  } catch (error) {
+    console.error('Get slots error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
  * GET /api/doctors/:id
  * Get doctor details by ID
  */
@@ -109,7 +196,10 @@ router.post('/', verifyToken, checkRole('Hospital_Admin'), async (req, res) => {
       consultation_fee,
       availability_status,
       phone,
-      email
+      email,
+      // Default availability
+      availability: [],
+      slotDuration: 30
     });
 
     res.status(201).json({ message: 'Doctor registered successfully', doctor });

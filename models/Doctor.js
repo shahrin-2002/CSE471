@@ -1,5 +1,17 @@
 const mongoose = require('mongoose');
 
+// Sub-schema for weekly availability
+const availabilitySchema = new mongoose.Schema({
+  day: {
+    type: String,
+    enum: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+    required: true
+  },
+  startTime: { type: String, required: true }, // Format "09:00"
+  endTime: { type: String, required: true },   // Format "17:00"
+  isAvailable: { type: Boolean, default: true }
+});
+
 const doctorSchema = new mongoose.Schema({
   user_id: {
     type: mongoose.Schema.Types.ObjectId,
@@ -38,7 +50,11 @@ const doctorSchema = new mongoose.Schema({
     default: 'Available'
   },
   phone: String,
-  email: String
+  email: String,
+  
+  // ✅ NEW FIELDS FOR MEMBER-2
+  slotDuration: { type: Number, default: 30 }, // Duration in minutes
+  availability: [availabilitySchema] 
 }, {
   timestamps: true
 });
