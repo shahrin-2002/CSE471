@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import './Profile.css'; // Import the CSS file
 
 export default function Profile() {
   const { user, setUser } = useAuth();
@@ -38,7 +39,9 @@ export default function Profile() {
     <div className="card">
       <h2>My Profile</h2>
       {user.locked && (
-        <p style={{ color: 'red' }}>Your profile is locked. You cannot edit.</p>
+        <p style={{ color: 'red', textAlign: 'center' }}>
+          Your profile is locked. You cannot edit.
+        </p>
       )}
 
       <div className="row">
