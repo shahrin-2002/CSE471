@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
-const Slot = require('../models/slot');
-const Appointment = require('../models/appointment');
+const Slot = require('../models/Slot');
+const Appointment = require('../models/Appointment');
 
 // Helper: find or create a slot
 async function findOrCreateSlot(doctorId, date, capacity = 5) {
@@ -58,13 +58,13 @@ exports.reschedule = async (req, res) => {
       // Promote waitlist if any
       if (oldSlot.waitlist.length > 0) {
         const nextPatient = oldSlot.waitlist.shift();
-        const promoted = await Appointment.create([{ 
-          patientId: nextPatient, 
-          doctorId: appt.doctorId, 
-          slotId: oldSlot._id, 
-          date: appt.date, 
-          status: 'booked', 
-          promotedAt: new Date() 
+        const promoted = await Appointment.create([{
+          patientId: nextPatient,
+          doctorId: appt.doctorId,
+          slotId: oldSlot._id,
+          date: appt.date,
+          status: 'booked',
+          promotedAt: new Date()
         }], { session });
         oldSlot.appointments.push(promoted[0]._id);
       }
@@ -127,13 +127,13 @@ exports.cancel = async (req, res) => {
     // Promote waitlisted patient if any
     if (slot.waitlist.length > 0) {
       const nextPatient = slot.waitlist.shift();
-      const promoted = await Appointment.create([{ 
-        patientId: nextPatient, 
-        doctorId: appt.doctorId, 
-        slotId: slot._id, 
-        date: appt.date, 
-        status: 'booked', 
-        promotedAt: new Date() 
+      const promoted = await Appointment.create([{
+        patientId: nextPatient,
+        doctorId: appt.doctorId,
+        slotId: slot._id,
+        date: appt.date,
+        status: 'booked',
+        promotedAt: new Date()
       }], { session });
       slot.appointments.push(promoted[0]._id);
     }
@@ -153,8 +153,13 @@ exports.cancel = async (req, res) => {
 exports.listMine = async (req, res) => {
   const patientId = req.user.id;
   const appts = await Appointment.find({ patientId })
-    .populate('doctorId', 'name email role')
+    .populate({
+      path: 'doctorId',
+      select: 'name specialization hospital_id',
+      populate: { path: 'hospital_id', select: 'name city' }
+    })
     .lean();
+
   res.json({ appointments: appts });
 };
 
@@ -164,5 +169,7 @@ exports.listForDoctor = async (req, res) => {
   const appts = await Appointment.find({ doctorId })
     .populate('patientId', 'name email')
     .lean();
+
   res.json({ appointments: appts });
 };
+
