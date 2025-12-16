@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { appointmentsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import './PatientAppointments.css';
 
 export default function PatientAppointments() {
   const { user } = useAuth();
@@ -38,10 +39,9 @@ export default function PatientAppointments() {
   const rescheduleAppointment = async (id) => {
     const newDate = prompt('Enter new date/time (ISO format):', new Date().toISOString());
     if (!newDate) return;
-
     setMsg('');
     try {
-      const { data } = await appointmentsAPI.reschedule(id, { doctorId: form.doctorId || user._id, newDate });
+      const { data } = await appointmentsAPI.reschedule(id, { newDate });
       setMsg(`Reschedule ${data.status}`);
       await loadAppointments();
     } catch (err) {
@@ -59,6 +59,13 @@ export default function PatientAppointments() {
     } catch (err) {
       setMsg(err.response?.data?.error || 'Cancel failed');
     }
+  };
+
+  const renderStatus = (status) => {
+    if (status === 'waitlisted') return <span className="badge waitlisted">⏳ Waitlisted</span>;
+    if (status === 'booked') return <span className="badge booked">Booked</span>;
+    if (status === 'cancelled') return <span className="badge cancelled">Cancelled</span>;
+    return <span className="badge">{status}</span>;
   };
 
   return (
@@ -85,17 +92,22 @@ export default function PatientAppointments() {
       {msg && <p className="kicker">{msg}</p>}
 
       {/* Appointment list */}
-      <ul>
+      <ul className="appointment-list">
         {appointments.map((a) => (
-          <li key={a._id}>
-            Doctor: {a.doctorId?.name || a.doctorId} | 
-            When: {new Date(a.date).toLocaleString()} | 
-            Status: {a.status}
-            <button className="btn" onClick={() => rescheduleAppointment(a._id)}>Reschedule</button>
-            <button className="btn" onClick={() => cancelAppointment(a._id)}>Cancel</button>
+          <li key={a._id} className="appointment-item">
+            <div>
+              <strong>Doctor:</strong> {a.doctorId?.name || a.doctorId} <br />
+              <strong>Hospital:</strong> {a.hospitalId?.name || 'N/A'} <br />
+              <strong>When:</strong> {new Date(a.date).toLocaleString()} <br />
+              <strong>Status:</strong> {renderStatus(a.status)}
+            </div>
+            <div className="actions">
+              <button className="btn secondary" onClick={() => rescheduleAppointment(a._id)}>Reschedule</button>
+              <button className="btn danger" onClick={() => cancelAppointment(a._id)}>Cancel</button>
+            </div>
           </li>
         ))}
       </ul>
     </div>
   );
-} 
+}
