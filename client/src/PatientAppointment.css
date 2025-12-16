@@ -1,0 +1,83 @@
+.card {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.card h2 {
+  text-align: center;
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.row {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.input {
+  flex: 1;
+  padding: 0.75rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.btn {
+  padding: 0.75rem 1.25rem;
+  background-color: #007bff;
+  color: #fff;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.btn:hover { background-color: #0056b3; }
+.btn.secondary { background-color: #6c757d; }
+.btn.secondary:hover { background-color: #5a6268; }
+.btn.danger { background-color: #dc3545; }
+.btn.danger:hover { background-color: #c82333; }
+
+.kicker {
+  margin-top: 0.5rem;
+  font-style: italic;
+  color: #555;
+  text-align: center;
+}
+
+.appointment-list {
+  list-style: none;
+  padding: 0;
+}
+
+.appointment-item {
+  display: flex;
+  justify-content: space-between;
+  background: #f9f9f9;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  border-radius: 6px;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  background: #e9ecef;
+  color: #333;
+}
+
+.badge.booked { background: #d1e7dd; color: #0f5132; }
+.badge.waitlisted { background: #fff3cd; color: #664d03; }
+.badge.cancelled { background: #f8d7da; color: #842029; }
