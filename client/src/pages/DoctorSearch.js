@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { doctorAPI } from '../services/api';
+import { doctorAPI, appointmentsAPI } from '../services/api';
 import '../styles/Search.css';
 
 const DoctorSearch = () => {
@@ -106,6 +106,17 @@ const DoctorSearch = () => {
     setSelectedDate('');
     setAvailableSlots([]);
     fetchDoctorDetails(doctor._id || doctor.id);
+  };
+  // ✅ Booking handler
+  const handleSlotClick = async (slot) => {
+    try {
+      const doctorId = selectedDoctor._id || selectedDoctor.id;
+      await appointmentsAPI.book({ doctorId, date: slot });
+      alert('YOUR APPOINTMENT IS BOOKED'); // popup confirmation
+      navigate('/appointments');           // redirect to My Appointments page
+    } catch (err) {
+      alert(err.response?.data?.error || 'Booking failed');
+    }
   };
 
   // Handle logout
@@ -273,7 +284,8 @@ const DoctorSearch = () => {
                                     cursor: 'pointer',
                                     textAlign: 'center'
                                   }}
-                                  onClick={() => alert(`You selected ${slot}. Proceed to booking?`)}
+                                  onClick={() => handleSlotClick(slot)}
+
                                 >
                                   {slot}
                                 </button>
