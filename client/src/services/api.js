@@ -45,13 +45,9 @@ api.interceptors.response.use(
 // Auth API endpoints
 // =======================
 export const authAPI = {
-  // User registration
   signup: (userData) => api.post('/auth/signup', userData),
-
-  // User login
   login: (credentials) => api.post('/auth/login', credentials),
   verifyOtp: (data) => api.post('/auth/verify-otp', data),
-  // Get user profile
   getProfile: () => api.get('/auth/profile'),
 };
 
@@ -59,16 +55,9 @@ export const authAPI = {
 // Hospital API endpoints
 // =======================
 export const hospitalAPI = {
-  // Get all hospitals with filters
   getAll: (params) => api.get('/hospitals', { params }),
-
-  // Get hospital by ID
   getById: (id) => api.get(`/hospitals/${id}`),
-
-  // Create hospital (admin only)
   create: (hospitalData) => api.post('/hospitals', hospitalData),
-
-  // Update hospital (admin only)
   update: (id, hospitalData) => api.put(`/hospitals/${id}`, hospitalData),
 };
 
@@ -76,18 +65,10 @@ export const hospitalAPI = {
 // Doctor API endpoints
 // =======================
 export const doctorAPI = {
-  // Get all doctors with filters
   getAll: (params) => api.get('/doctors', { params }),
-
-  // Get doctor by ID
   getById: (id) => api.get(`/doctors/${id}`),
-
-  // Create doctor (admin only)
   create: (doctorData) => api.post('/doctors', doctorData),
-
-  // Update doctor (admin only)
   update: (id, doctorData) => api.put(`/doctors/${id}`, doctorData),
-
   getSlots: (doctorId, date) => api.get(`/doctors/${doctorId}/slots?date=${date}`),
   updateAvailability: (data) => api.put('/doctors/availability/me', data),
   getMyProfile: () => api.get('/doctors/profile/me'),
@@ -97,21 +78,34 @@ export const doctorAPI = {
 // Appointment API endpoints
 // =======================
 export const appointmentsAPI = {
-  // Book an appointment (patient)
   book: (payload) => api.post('/appointments/book', payload),
-
-  // Reschedule an appointment (patient)
   reschedule: (id, payload) => api.patch(`/appointments/${id}/reschedule`, payload),
-
-  // Cancel an appointment (patient)
   cancel: (id) => api.delete(`/appointments/${id}/cancel`),
-
-  // Get current user's appointments (patient)
   mine: () => api.get('/appointments/mine'),
-
-  // Get all appointments for a doctor
   doctor: (doctorId) => api.get(`/appointments/doctor/${doctorId}`),
 };
 
-export default api;
+// =======================
+// Medical Record API endpoints
+// =======================
+export const medicalRecordAPI = {
+  // Patient: view own records
+  mine: () => api.get('/records/mine'),
 
+  // Doctor: create new record
+  create: (payload) => api.post('/records', payload),
+
+  // Doctor: view patient records
+  forPatient: (patientId) => api.get(`/records/${patientId}`),
+
+  // Doctor: update record
+  update: (id, payload) => api.patch(`/records/${id}`, payload),
+
+  // Doctor: add attachment (metadata only)
+  addAttachment: (id, payload) => api.post(`/records/${id}/attachments`, payload),
+
+  // Doctor: remove attachment
+  removeAttachment: (id, attachmentId) => api.delete(`/records/${id}/attachments/${attachmentId}`),
+};
+
+export default api;
