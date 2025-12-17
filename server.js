@@ -17,6 +17,7 @@ const appointmentRoutes = require('./routes/appointmentRoutes');
 const userRoutes = require('./routes/userRoutes');
 const documentRoutes = require('./routes/documentRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const medicalRecordRoutes = require('./routes/medicalRecordRoutes'); // ✅ NEW
 
 const app = express();
 
@@ -50,7 +51,8 @@ mongoose.connection.on('error', (error) => {
 app.use('/api/auth', initAuthRoutes());
 app.use('/api/hospitals', hospitalRoutes);
 app.use('/api/doctors', doctorRoutes);
-app.use('/api/appointments', appointmentRoutes); // ✅ mount new routes
+app.use('/api/appointments', appointmentRoutes);
+app.use('/api/records', medicalRecordRoutes); // ✅ mount medical records
 
 // Basic health check endpoint
 app.get('/health', (req, res) => {
@@ -103,6 +105,12 @@ app.listen(PORT, () => {
   console.log(`   - DELETE http://127.0.0.1:${PORT}/api/appointments/:id/cancel`);
   console.log(`   - GET    http://127.0.0.1:${PORT}/api/appointments/mine`);
   console.log(`   - GET    http://127.0.0.1:${PORT}/api/appointments/doctor/:doctorId`);
+  console.log(`   - GET    http://127.0.0.1:${PORT}/api/records/mine`);
+  console.log(`   - POST   http://127.0.0.1:${PORT}/api/records`);
+  console.log(`   - GET    http://127.0.0.1:${PORT}/api/records/:patientId`);
+  console.log(`   - PATCH  http://127.0.0.1:${PORT}/api/records/:id`);
+  console.log(`   - POST   http://127.0.0.1:${PORT}/api/records/:id/attachments`);
+  console.log(`   - DELETE http://127.0.0.1:${PORT}/api/records/:id/attachments/:attachmentId`);
   console.log(`✅ Health check: http://127.0.0.1:${PORT}/health\n`);
 });
 
