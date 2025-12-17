@@ -1,24 +1,18 @@
-// backend/controllers/medicalRecordController.js
 const MedicalRecord = require('../models/MedicalRecord');
 const Doctor = require('../models/Doctor');
 
 // Create new record
 exports.createRecord = async (req, res) => {
   try {
-    // Resolve hospital from the doctor profile if not provided
-    let hospitalId = req.body.hospitalId;
-    if (!hospitalId) {
-      const doc = await Doctor.findById(req.user.id).select('hospital_id');
-      if (!doc || !doc.hospital_id) return res.status(400).json({ error: 'Doctor hospital not found' });
-      hospitalId = doc.hospital_id;
-    }
+    // doctorId comes from the authenticated doctor
+    const doctorId = req.user.id;
 
     const record = await MedicalRecord.create({
       ...req.body,
       patientId: req.body.patientId,
-      clinicianId: req.user.id,
-      hospitalId
+      doctorId
     });
+
     res.status(201).json({ message: 'Record created', record });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -29,9 +23,13 @@ exports.createRecord = async (req, res) => {
 exports.listMine = async (req, res) => {
   try {
     const records = await MedicalRecord.find({ patientId: req.user.id })
-      .populate('clinicianId', 'name specialization')
-      .populate('hospitalId', 'name city')
+      .populate({
+        path: 'doctorId',
+        select: 'name specialization hospital_id',
+        populate: { path: 'hospital_id', select: 'name city' }
+      })
       .lean();
+
     res.json({ records });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -43,9 +41,13 @@ exports.listForPatient = async (req, res) => {
   try {
     const { patientId } = req.params;
     const records = await MedicalRecord.find({ patientId })
-      .populate('clinicianId', 'name specialization')
-      .populate('hospitalId', 'name city')
+      .populate({
+        path: 'doctorId',
+        select: 'name specialization hospital_id',
+        populate: { path: 'hospital_id', select: 'name city' }
+      })
       .lean();
+
     res.json({ records });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -60,6 +62,7 @@ exports.updateRecord = async (req, res) => {
       req.body,
       { new: true }
     );
+
     res.json({ message: 'Record updated', record });
   } catch (err) {
     res.status(400).json({ error: err.message });
