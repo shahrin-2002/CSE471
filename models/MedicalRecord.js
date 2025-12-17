@@ -1,16 +1,38 @@
-// backend/models/MedicalRecord.js
 const mongoose = require('mongoose');
 
 const medicalRecordSchema = new mongoose.Schema({
-  patientId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  clinicianId: { type: mongoose.Schema.Types.ObjectId, ref: 'Doctor', required: true },
-  hospitalId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hospital', required: true }, // ✅ clinic is hospital
+  // Patient reference
+  patientId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
 
-  visitDate: { type: Date, default: Date.now },
-  reason: { type: String, required: true },
-  notes: { type: String },
+  // Doctor reference (clinician)
+  doctorId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Doctor',
+    required: true
+  },
 
-  diagnoses: [{ code: String, description: String }],
+  // Encounter details
+  visitDate: {
+    type: Date,
+    default: Date.now
+  },
+  reason: {
+    type: String,
+    required: true
+  },
+  notes: String,
+
+  // Diagnoses
+  diagnoses: [{
+    code: String,          // ICD-10 or internal code
+    description: String    // Human-readable diagnosis
+  }],
+
+  // Vitals
   vitals: {
     bloodPressure: String,
     heartRate: Number,
@@ -18,6 +40,8 @@ const medicalRecordSchema = new mongoose.Schema({
     weight: Number,
     height: Number
   },
+
+  // Prescriptions
   prescriptions: [{
     medication: String,
     dosage: String,
@@ -25,16 +49,23 @@ const medicalRecordSchema = new mongoose.Schema({
     duration: String
   }],
 
+  // Attachments (lab reports, scans, etc.)
   attachments: [{
     filename: String,
-    url: String,
+    url: String, // Cloud storage URL
     uploadedAt: { type: Date, default: Date.now }
   }],
 
+  // Access control
   access: {
     patient: { type: Boolean, default: true },
-    clinicians: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Doctor' }]
+    doctors: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Doctor' }]
   }
-}, { timestamps: true });
+}, {
+  timestamps: true
+});
+
+// Index for search by patient and doctor
+medicalRecordSchema.index({ patientId: 1, doctorId: 1 });
 
 module.exports = mongoose.model('MedicalRecord', medicalRecordSchema);
