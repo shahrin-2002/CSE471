@@ -1,5 +1,5 @@
-const Invoice = require('../models/Invoice');
-const Payment = require('../models/Payment');
+const Invoice = require('../models/invoice');
+const Payment = require('../models/payment');
 const PDFDocument = require('pdfkit');
 
 exports.downloadInvoice = async (req, res) => {
