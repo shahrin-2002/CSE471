@@ -1,0 +1,15 @@
+const mongoose = require('mongoose');
+
+const paymentSchema = new mongoose.Schema({
+  bookingId: { type: mongoose.Schema.Types.ObjectId, ref: 'Appointment', required: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  doctorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Doctor', required: true },
+  gateway: { type: String, enum: ['stripe', 'sslcommerz'], required: true },
+  amount: { type: Number, required: true },
+  currency: { type: String, default: 'BDT' },
+  status: { type: String, enum: ['initiated', 'succeeded', 'failed', 'refunded'], default: 'initiated' },
+  gatewayRefs: { type: Object }, // e.g. stripePaymentIntentId, sslcTranId
+  meta: { type: Object },
+}, { timestamps: true });
+
+module.exports = mongoose.model('Payment', paymentSchema);
