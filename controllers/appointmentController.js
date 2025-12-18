@@ -1,6 +1,9 @@
 const mongoose = require('mongoose');
 const Slot = require('../models/Slot');
 const Appointment = require('../models/Appointment');
+const User = require('../models/User');
+const Doctor = require('../models/Doctor');
+const { notifyUser } = require('../utils/notificationService');
 
 // Helper: find or create a slot
 async function findOrCreateSlot(doctorId, date, capacity = 5) {
@@ -23,6 +26,29 @@ exports.book = async (req, res) => {
       const appt = await Appointment.create({ patientId, doctorId, slotId: slot._id, date });
       slot.appointments.push(appt._id);
       await slot.save();
+
+      // Notify patient & doctor (basic email/SMS)
+      try {
+        const [patient, doctor] = await Promise.all([
+          User.findById(patientId),
+          Doctor.findById(doctorId).populate('hospital_id', 'name'),
+        ]);
+        const when = new Date(date).toLocaleString();
+        const subject = 'Appointment Booked';
+        const text =
+          `Your appointment with Dr. ${doctor?.name || ''} ` +
+          `(${doctor?.hospital_id?.name || 'Hospital'}) is booked for ${when}.`;
+
+        await notifyUser({
+          email: patient?.email,
+          phone: patient?.phone,
+          subject,
+          text,
+        });
+      } catch (e) {
+        console.log('Notification failed (book):', e.message);
+      }
+
       return res.json({ success: true, status: 'booked', appointment: appt });
     } else {
       if (!slot.waitlist.includes(patientId)) {
@@ -95,6 +121,21 @@ exports.reschedule = async (req, res) => {
     await Promise.all([newSlot.save({ session }), appt.save({ session })]);
 
     await session.commitTransaction();
+
+    // Notify patient about reschedule (outside of session)
+    try {
+      const patient = await User.findById(patientId);
+      const when = new Date(newDate).toLocaleString();
+      await notifyUser({
+        email: patient?.email,
+        phone: patient?.phone,
+        subject: 'Appointment Rescheduled',
+        text: `Your appointment has been rescheduled to ${when}.`,
+      });
+    } catch (e) {
+      console.log('Notification failed (reschedule):', e.message);
+    }
+
     return res.json({ success: true, status: 'booked', appointment: appt });
   } catch (err) {
     await session.abortTransaction();
@@ -140,6 +181,21 @@ exports.cancel = async (req, res) => {
 
     await slot.save({ session });
     await session.commitTransaction();
+
+    // Notify patient about cancellation (outside of session)
+    try {
+      const patient = await User.findById(patientId);
+      const when = new Date(appt.date).toLocaleString();
+      await notifyUser({
+        email: patient?.email,
+        phone: patient?.phone,
+        subject: 'Appointment Cancelled',
+        text: `Your appointment scheduled for ${when} has been cancelled.`,
+      });
+    } catch (e) {
+      console.log('Notification failed (cancel):', e.message);
+    }
+
     return res.json({ success: true });
   } catch (err) {
     await session.abortTransaction();

@@ -52,7 +52,7 @@ const doctorSchema = new mongoose.Schema({
   phone: String,
   email: String,
   
-  // ✅ NEW FIELDS FOR MEMBER-2
+
   slotDuration: { type: Number, default: 30 }, // Duration in minutes
   availability: [availabilitySchema] 
 }, {
