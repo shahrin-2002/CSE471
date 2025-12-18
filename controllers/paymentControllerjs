@@ -1,0 +1,160 @@
+const Payment = require('../models/Payment');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const axios = require('axios');
+
+// Initiate payment
+exports.checkout = async (req, res) => {
+  try {
+    const { bookingId, doctorId, amount, currency, gateway } = req.body;
+    const userId = req.user.id;
+
+    const payment = await Payment.create({
+      bookingId,
+      doctorId,
+      userId,
+      amount,
+      currency,
+      gateway,
+      status: 'initiated'
+    });
+
+    if (gateway === 'stripe') {
+      const intent = await stripe.paymentIntents.create({
+        amount: amount * 100, // Stripe expects smallest unit
+        currency,
+        metadata: { bookingId, userId, doctorId }
+      });
+
+      payment.gatewayRefs = { stripePaymentIntentId: intent.id };
+      await payment.save();
+
+      return res.json({
+        paymentId: payment._id,
+        clientSecret: intent.client_secret
+      });
+    }
+
+    if (gateway === 'sslcommerz') {
+      const tran_id = `TXN_${Date.now()}`;
+      const sslcPayload = {
+        store_id: process.env.SSLC_STORE_ID,
+        store_passwd: process.env.SSLC_STORE_PASSWORD,
+        total_amount: amount,
+        currency,
+        tran_id,
+        success_url: `${process.env.APP_BASE_URL}/api/payments/webhook/sslcommerz`,
+        fail_url: `${process.env.APP_BASE_URL}/api/payments/webhook/sslcommerz`,
+        cancel_url: `${process.env.APP_BASE_URL}/api/payments/webhook/sslcommerz`,
+        cus_name: req.user.name,
+        cus_email: req.user.email,
+        cus_add1: 'Dhaka',
+        cus_phone: '01700000000',
+        product_name: 'Doctor Booking',
+        product_category: 'Healthcare',
+        product_profile: 'general'
+      };
+
+      const response = await axios.post(
+        'https://sandbox.sslcommerz.com/gwprocess/v4/api.php',
+        sslcPayload
+      );
+
+      payment.gatewayRefs = { sslcTranId: tran_id };
+      await payment.save();
+
+      return res.json({
+        paymentId: payment._id,
+        redirectUrl: response.data.GatewayPageURL
+      });
+    }
+
+    return res.status(400).json({ error: 'Unsupported gateway' });
+  } catch (err) {
+    console.error('Checkout error:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Stripe webhook
+exports.stripeWebhook = async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(req.rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET);
+  } catch (err) {
+    console.error('Stripe webhook signature error:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  if (event.type === 'payment_intent.succeeded') {
+    const intent = event.data.object;
+    await Payment.findOneAndUpdate(
+      { 'gatewayRefs.stripePaymentIntentId': intent.id },
+      { status: 'succeeded' }
+    );
+  }
+
+  if (event.type === 'payment_intent.payment_failed') {
+    const intent = event.data.object;
+    await Payment.findOneAndUpdate(
+      { 'gatewayRefs.stripePaymentIntentId': intent.id },
+      { status: 'failed' }
+    );
+  }
+
+  res.json({ received: true });
+};
+
+// SSLCommerz webhook (IPN)
+exports.sslcommerzWebhook = async (req, res) => {
+  try {
+    const { status, tran_id } = req.body;
+
+    if (status === 'VALID') {
+      await Payment.findOneAndUpdate(
+        { 'gatewayRefs.sslcTranId': tran_id },
+        { status: 'succeeded' }
+      );
+    } else {
+      await Payment.findOneAndUpdate(
+        { 'gatewayRefs.sslcTranId': tran_id },
+        { status: 'failed' }
+      );
+    }
+
+    res.status(200).send('IPN received');
+  } catch (err) {
+    console.error('SSLCommerz webhook error:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Refund endpoint (Stripe only for now)
+exports.refund = async (req, res) => {
+  try {
+    const { paymentId, amount, reason } = req.body;
+    const payment = await Payment.findById(paymentId);
+    if (!payment || payment.status !== 'succeeded') {
+      return res.status(400).json({ error: 'Invalid or incomplete payment' });
+    }
+
+    if (payment.gateway === 'stripe') {
+      const refund = await stripe.refunds.create({
+        payment_intent: payment.gatewayRefs.stripePaymentIntentId,
+        amount: amount ? amount * 100 : undefined,
+        reason: reason || 'requested_by_customer'
+      });
+
+      payment.status = 'refunded';
+      await payment.save();
+
+      return res.json({ message: 'Refund processed', refundId: refund.id });
+    }
+
+    return res.status(400).json({ error: 'Refund not supported for this gateway yet' });
+  } catch (err) {
+    console.error('Refund error:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
