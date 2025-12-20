@@ -18,6 +18,12 @@ import HospitalSearch from './pages/HospitalSearch';
 import DoctorSearch from './pages/DoctorSearch';
 // ✅ Member-2: Import the new Manage Schedule page
 import ManageSchedule from './pages/ManageSchedule';
+// Doctor Online Appointments
+import DoctorOnlineAppointments from './pages/DoctorOnlineAppointments';
+// Booking Pages
+import ICUBooking from './pages/ICUBooking';
+import GeneralBedBooking from './pages/GeneralBedBooking';
+import CabinBooking from './pages/CabinBooking';
 import './App.css';
 
 // Protected Route Component
@@ -45,8 +51,10 @@ const PublicRoute = ({ children }) => {
 // Role Guard Component (for role-based routes)
 const RoleGuard = ({ role, children }) => {
   const { user } = useAuth();
-  // Allow if user matches role, otherwise deny
-  return user?.role === role ? children : <div>Access denied</div>;
+  // Allow if user matches role (case-insensitive), otherwise deny
+  const userRole = user?.role?.toLowerCase();
+  const requiredRole = role?.toLowerCase();
+  return userRole === requiredRole ? children : <div>Access denied</div>;
 };
 
 function AppContent() {
@@ -114,6 +122,11 @@ function AppContent() {
         <Route path="/hospitals" element={<HospitalSearch />} />
         <Route path="/doctors" element={<DoctorSearch />} />
 
+        {/* Booking Routes */}
+        <Route path="/booking/icu" element={<ICUBooking />} />
+        <Route path="/booking/general-bed" element={<GeneralBedBooking />} />
+        <Route path="/booking/cabin" element={<CabinBooking />} />
+
         {/* Appointment routes */}
         <Route
           path="/appointments"
@@ -141,6 +154,18 @@ function AppContent() {
             <ProtectedRoute>
               <RoleGuard role="doctor">
                 <ManageSchedule />
+              </RoleGuard>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Doctor Online Appointments */}
+        <Route
+          path="/doctor/online-appointments"
+          element={
+            <ProtectedRoute>
+              <RoleGuard role="doctor">
+                <DoctorOnlineAppointments />
               </RoleGuard>
             </ProtectedRoute>
           }

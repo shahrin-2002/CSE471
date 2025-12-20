@@ -1,13 +1,22 @@
+/**
+ * Patient Appointments Page
+ * Shows patient's appointments with incoming video call handling
+ */
+
 import { useEffect, useState } from 'react';
 import { appointmentsAPI } from '../services/api';
-import { useAuth } from '../context/AuthContext';
-import './PatientAppointments.css';
+import socketService from '../services/socket';
+import VideoCallModal from '../components/VideoCallModal';
+import '../PatientAppointment.css';
 
 export default function PatientAppointments() {
-  const { user } = useAuth();
   const [appointments, setAppointments] = useState([]);
-  const [form, setForm] = useState({ doctorId: '', date: '' });
+  const [form, setForm] = useState({ doctorId: '', date: '', type: 'in-person' });
   const [msg, setMsg] = useState('');
+
+  // Video call state
+  const [incomingCall, setIncomingCall] = useState(null); // { appointmentId, doctorId, doctorName }
+  const [activeCall, setActiveCall] = useState(null);
 
   // Load patient's appointments
   const loadAppointments = async () => {
@@ -19,9 +28,60 @@ export default function PatientAppointments() {
     }
   };
 
+  // Set up socket listeners on mount
+  useEffect(() => {
+    // Listen for incoming calls from doctor
+    socketService.onIncomingCall(({ appointmentId, doctorId, doctorName }) => {
+      console.log('[Patient] Incoming call:', { appointmentId, doctorId, doctorName });
+      setIncomingCall({ appointmentId, doctorId, doctorName });
+    });
+
+    // Listen for call ended by doctor
+    socketService.onCallEnded(() => {
+      setActiveCall(null);
+      setIncomingCall(null);
+      setMsg('Call ended');
+    });
+
+    // Listen for appointment status updates (e.g., completed by doctor)
+    socketService.onAppointmentUpdated(({ appointmentId, status }) => {
+      console.log('[Patient] Appointment updated:', appointmentId, status);
+      setMsg(`Appointment marked as ${status} by doctor`);
+      loadAppointments(); // Refresh the list
+    });
+
+    return () => {
+      socketService.off('call:incoming');
+      socketService.off('call:ended');
+      socketService.off('appointment:updated');
+    };
+  }, []);
+
   useEffect(() => {
     loadAppointments();
   }, []);
+
+  // Accept call and signal ready
+  const acceptCall = () => {
+    if (incomingCall) {
+      socketService.confirmReady(incomingCall.appointmentId, incomingCall.doctorId);
+      setActiveCall(incomingCall);
+      setIncomingCall(null);
+    }
+  };
+
+  // Decline call
+  const declineCall = () => {
+    if (incomingCall) {
+      socketService.declineCall(incomingCall.appointmentId, incomingCall.doctorId);
+      setIncomingCall(null);
+    }
+  };
+
+  // Close video call
+  const closeVideoCall = () => {
+    setActiveCall(null);
+  };
 
   // Book new appointment
   const bookAppointment = async () => {
@@ -62,9 +122,11 @@ export default function PatientAppointments() {
   };
 
   const renderStatus = (status) => {
-    if (status === 'waitlisted') return <span className="badge waitlisted">⏳ Waitlisted</span>;
+    if (status === 'waitlisted') return <span className="badge waitlisted">Waitlisted</span>;
     if (status === 'booked') return <span className="badge booked">Booked</span>;
+    if (status === 'approved') return <span className="badge approved">Approved</span>;
     if (status === 'cancelled') return <span className="badge cancelled">Cancelled</span>;
+    if (status === 'completed') return <span className="badge completed">Completed</span>;
     return <span className="badge">{status}</span>;
   };
 
@@ -86,6 +148,14 @@ export default function PatientAppointments() {
           value={form.date}
           onChange={(e) => setForm({ ...form, date: e.target.value })}
         />
+        <select
+          className="input"
+          value={form.type}
+          onChange={(e) => setForm({ ...form, type: e.target.value })}
+        >
+          <option value="in-person">In-Person</option>
+          <option value="online">Online</option>
+        </select>
         <button className="btn" onClick={bookAppointment}>Book</button>
       </div>
 
@@ -98,16 +168,55 @@ export default function PatientAppointments() {
             <div>
               <strong>Doctor:</strong> {a.doctorId?.name || a.doctorId} <br />
               <strong>Hospital:</strong> {a.hospitalId?.name || 'N/A'} <br />
-              <strong>When:</strong> {new Date(a.date).toLocaleString()} <br />
+              <strong>When:</strong> {new Date(a.slotId?.date || a.date).toLocaleString()} <br />
+              <strong>Type:</strong> {a.type === 'online' ? 'Online' : 'In-Person'} <br />
               <strong>Status:</strong> {renderStatus(a.status)}
             </div>
             <div className="actions">
-              <button className="btn secondary" onClick={() => rescheduleAppointment(a._id)}>Reschedule</button>
-              <button className="btn danger" onClick={() => cancelAppointment(a._id)}>Cancel</button>
+              {a.status !== 'cancelled' && a.status !== 'completed' && (
+                <>
+                  <button className="btn secondary" onClick={() => rescheduleAppointment(a._id)}>Reschedule</button>
+                  <button className="btn danger" onClick={() => cancelAppointment(a._id)}>Cancel</button>
+                </>
+              )}
             </div>
           </li>
         ))}
       </ul>
+
+      {/* Incoming Call Notification */}
+      {incomingCall && (
+        <div className="incoming-call-overlay">
+          <div className="incoming-call-modal">
+            <div className="call-icon">
+              <span className="ring-animation"></span>
+              <span className="phone-icon">📞</span>
+            </div>
+            <h3>Incoming Video Call</h3>
+            <p>Dr. {incomingCall.doctorName} is calling...</p>
+            <div className="call-actions">
+              <button className="btn-accept" onClick={acceptCall}>
+                Ready
+              </button>
+              <button className="btn-decline" onClick={declineCall}>
+                Decline
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Video Call Modal */}
+      {activeCall && (
+        <VideoCallModal
+          isOpen={!!activeCall}
+          onClose={closeVideoCall}
+          appointmentId={activeCall.appointmentId}
+          remoteUserId={activeCall.doctorId}
+          remoteUserName={`Dr. ${activeCall.doctorName}`}
+          isInitiator={false}
+        />
+      )}
     </div>
   );
 }

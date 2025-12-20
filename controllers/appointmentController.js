@@ -16,14 +16,20 @@ async function findOrCreateSlot(doctorId, date, capacity = 5) {
 
 // POST /api/appointments/book
 exports.book = async (req, res) => {
-  const { doctorId, date } = req.body;
+  const { doctorId, date, type = 'in-person' } = req.body;
   const patientId = req.user.id;
 
   try {
     let slot = await findOrCreateSlot(doctorId, date);
 
     if (slot.appointments.length < slot.capacity) {
-      const appt = await Appointment.create({ patientId, doctorId, slotId: slot._id, date });
+      const appt = await Appointment.create({
+        patientId,
+        doctorId,
+        slotId: slot._id,
+        date,
+        type: type === 'online' ? 'online' : 'in-person'
+      });
       slot.appointments.push(appt._id);
       await slot.save();
 
@@ -224,8 +230,59 @@ exports.listForDoctor = async (req, res) => {
   const { doctorId } = req.params;
   const appts = await Appointment.find({ doctorId })
     .populate('patientId', 'name email')
+    .populate('slotId', 'date')
     .lean();
 
   res.json({ appointments: appts });
+};
+
+// PATCH /api/appointments/:id/approve - Doctor approves appointment
+exports.approve = async (req, res) => {
+  const { id } = req.params;
+  const doctorUserId = req.user.id;
+
+  try {
+    const appt = await Appointment.findById(id).populate('doctorId');
+    if (!appt) {
+      return res.status(404).json({ error: 'Appointment not found' });
+    }
+
+    // Check if the doctor owns this appointment (doctorId references Doctor model which has user_id)
+    if (appt.doctorId?.user_id?.toString() !== doctorUserId &&
+        appt.doctorId?._id?.toString() !== doctorUserId) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    if (appt.status === 'cancelled') {
+      return res.status(400).json({ error: 'Cannot approve cancelled appointment' });
+    }
+
+    appt.status = 'approved';
+    await appt.save();
+
+    res.json({ success: true, appointment: appt });
+  } catch (err) {
+    return res.status(400).json({ error: err.message || 'Approval failed' });
+  }
+};
+
+// PATCH /api/appointments/:id/complete - Mark appointment as completed
+exports.complete = async (req, res) => {
+  const { id } = req.params;
+  const doctorUserId = req.user.id;
+
+  try {
+    const appt = await Appointment.findById(id).populate('doctorId');
+    if (!appt) {
+      return res.status(404).json({ error: 'Appointment not found' });
+    }
+
+    appt.status = 'completed';
+    await appt.save();
+
+    res.json({ success: true, appointment: appt });
+  } catch (err) {
+    return res.status(400).json({ error: err.message || 'Completion failed' });
+  }
 };
 

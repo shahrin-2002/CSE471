@@ -1,6 +1,6 @@
 const nodemailer = require('nodemailer');
 
-const sendEmail = async (to, subject, text) => {
+const sendEmail = async (to, subject, text, html = null) => {
   try {
     const transporter = nodemailer.createTransport({
       service: 'gmail', // Built-in service for Gmail
@@ -10,12 +10,19 @@ const sendEmail = async (to, subject, text) => {
       },
     });
 
-    const info = await transporter.sendMail({
+    const mailOptions = {
       from: `"HealthConnect" <${process.env.EMAIL_USER}>`,
       to,
       subject,
       text,
-    });
+    };
+
+    // Add HTML if provided
+    if (html) {
+      mailOptions.html = html;
+    }
+
+    const info = await transporter.sendMail(mailOptions);
 
     console.log(`[Email Sent] To: ${to} | ID: ${info.messageId}`);
     return info;

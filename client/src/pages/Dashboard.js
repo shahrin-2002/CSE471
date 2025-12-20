@@ -37,6 +37,16 @@ const Dashboard = () => {
         <ul className="nav-links">
           <li><Link to="/hospitals">Hospitals</Link></li>
           <li><Link to="/doctors">Doctors</Link></li>
+          <li className="nav-dropdown">
+            <span className="nav-dropdown-toggle">
+              Booking <span className="dropdown-arrow">▼</span>
+            </span>
+            <ul className="nav-dropdown-menu">
+              <li><Link to="/booking/icu">ICU</Link></li>
+              <li><Link to="/booking/general-bed">General Bed</Link></li>
+              <li><Link to="/booking/cabin">Cabin</Link></li>
+            </ul>
+          </li>
           <li><Link to="/appointments">Appointments</Link></li>
           <li><Link to="/profile">Profile</Link></li>
           <li><Link to="/documents">Documents</Link></li>
@@ -79,13 +89,20 @@ const Dashboard = () => {
                 <h3 style={{ marginBottom: '15px', color: '#2B2B2B' }}>Quick Links</h3>
                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                   
-                  {/* ✅ NEW BUTTON: Manage Availability (Only for Doctors) */}
+                  {/* Doctor-only buttons */}
                   {isDoctor && (
-                    <Link to="/doctor/schedule">
-                      <button className="btn-submit" style={{ padding: '10px 20px', backgroundColor: '#2B2B2B', color: 'white' }}>
-                        🕒 Manage Availability
-                      </button>
-                    </Link>
+                    <>
+                      <Link to="/doctor/online-appointments">
+                        <button className="btn-submit" style={{ padding: '10px 20px', backgroundColor: '#28a745', color: 'white' }}>
+                          📹 Online Appointments
+                        </button>
+                      </Link>
+                      <Link to="/doctor/schedule">
+                        <button className="btn-submit" style={{ padding: '10px 20px', backgroundColor: '#2B2B2B', color: 'white' }}>
+                          🕒 Manage Availability
+                        </button>
+                      </Link>
+                    </>
                   )}
 
                   <Link to="/hospitals">
