@@ -81,3 +81,93 @@
 .badge.booked { background: #d1e7dd; color: #0f5132; }
 .badge.waitlisted { background: #fff3cd; color: #664d03; }
 .badge.cancelled { background: #f8d7da; color: #842029; }
+.badge.approved { background: #cfe2ff; color: #084298; }
+.badge.completed { background: #d1e7dd; color: #0f5132; }
+
+/* Call Request Notifications */
+.call-requests-section {
+  margin-bottom: 20px;
+  padding: 15px;
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-radius: 10px;
+  border: 2px solid #4caf50;
+}
+
+.call-requests-section h3 {
+  margin: 0 0 15px 0;
+  color: #2e7d32;
+}
+
+.call-request-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.call-request-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.call-request-info strong {
+  font-size: 16px;
+  color: #333;
+}
+
+.call-request-info span {
+  font-size: 13px;
+  color: #666;
+}
+
+.call-request-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn.video-call {
+  background: #28a745;
+  animation: pulse-green 2s infinite;
+}
+
+.btn.video-call:hover {
+  background: #218838;
+}
+
+@keyframes pulse-green {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.4); }
+  50% { box-shadow: 0 0 0 10px rgba(40, 167, 69, 0); }
+}
+
+.ready-badge {
+  padding: 8px 12px;
+  background: #fff3cd;
+  color: #856404;
+  border-radius: 4px;
+  font-size: 13px;
+  animation: pulse-wait 2s infinite;
+}
+
+@keyframes pulse-wait {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .call-request-card {
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .call-request-actions {
+    width: 100%;
+  }
+}

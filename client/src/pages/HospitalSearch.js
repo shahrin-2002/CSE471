@@ -98,6 +98,16 @@ const HospitalSearch = () => {
         <ul className="nav-links">
           <li><Link to="/hospitals" className="active">Hospitals</Link></li>
           <li><Link to="/doctors">Doctors</Link></li>
+          <li className="nav-dropdown">
+            <span className="nav-dropdown-toggle">
+              Booking <span className="dropdown-arrow">▼</span>
+            </span>
+            <ul className="nav-dropdown-menu">
+              <li><Link to="/booking/icu">ICU</Link></li>
+              <li><Link to="/booking/general-bed">General Bed</Link></li>
+              <li><Link to="/booking/cabin">Cabin</Link></li>
+            </ul>
+          </li>
           <li><Link to="/appointments">Appointments</Link></li>
           <li><Link to="/dashboard">Dashboard</Link></li>
         </ul>

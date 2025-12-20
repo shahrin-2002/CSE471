@@ -28,6 +28,7 @@ const DoctorSearch = () => {
   const [selectedDate, setSelectedDate] = useState('');
   const [availableSlots, setAvailableSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
+  const [appointmentType, setAppointmentType] = useState('in-person');
 
   // Fetch doctors
   const fetchDoctors = async (search = '') => {
@@ -111,9 +112,12 @@ const DoctorSearch = () => {
   const handleSlotClick = async (slot) => {
     try {
       const doctorId = selectedDoctor._id || selectedDoctor.id;
-      await appointmentsAPI.book({ doctorId, date: slot });
-      alert('YOUR APPOINTMENT IS BOOKED'); // popup confirmation
-      navigate('/appointments');           // redirect to My Appointments page
+      // Combine selected date with slot time to create full datetime
+      const fullDateTime = `${selectedDate}T${slot}:00`;
+      await appointmentsAPI.book({ doctorId, date: fullDateTime, type: appointmentType });
+      const typeLabel = appointmentType === 'online' ? 'ONLINE VIDEO CALL' : 'IN-PERSON';
+      alert(`YOUR ${typeLabel} APPOINTMENT IS BOOKED`);
+      navigate('/appointments');
     } catch (err) {
       alert(err.response?.data?.error || 'Booking failed');
     }
@@ -142,6 +146,16 @@ const DoctorSearch = () => {
         <ul className="nav-links">
           <li><Link to="/hospitals">Hospitals</Link></li>
           <li><Link to="/doctors" className="active">Doctors</Link></li>
+          <li className="nav-dropdown">
+            <span className="nav-dropdown-toggle">
+              Booking <span className="dropdown-arrow">▼</span>
+            </span>
+            <ul className="nav-dropdown-menu">
+              <li><Link to="/booking/icu">ICU</Link></li>
+              <li><Link to="/booking/general-bed">General Bed</Link></li>
+              <li><Link to="/booking/cabin">Cabin</Link></li>
+            </ul>
+          </li>
           <li><Link to="/appointments">Appointments</Link></li>
           <li><Link to="/dashboard">Dashboard</Link></li>
         </ul>
@@ -243,10 +257,24 @@ const DoctorSearch = () => {
 
                     {/* ✅ Member-2 Feature: Dynamic Booking Form */}
                     <div className="booking-form">
+                      {/* Appointment Type Selection */}
+                      <div className="form-field full-width" style={{ marginBottom: '15px' }}>
+                        <label>Appointment Type</label>
+                        <select
+                          className="form-select"
+                          value={appointmentType}
+                          onChange={(e) => setAppointmentType(e.target.value)}
+                          style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ddd', width: '100%' }}
+                        >
+                          <option value="in-person">In-Person Visit</option>
+                          <option value="online">Online Video Call</option>
+                        </select>
+                      </div>
+
                       <div className="form-field full-width">
                         <label>Select Date</label>
-                        <input 
-                          type="date" 
+                        <input
+                          type="date"
                           className="form-select"
                           min={new Date().toISOString().split('T')[0]}
                           value={selectedDate}

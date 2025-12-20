@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react';
 import { appointmentsAPI } from '../services/api';
-import { useAuth } from '../context/AuthContext';
-import './PatientAppointments.css';
+import '../PatientAppointment.css';
 
 export default function PatientAppointments() {
-  const { user } = useAuth();
   const [appointments, setAppointments] = useState([]);
-  const [form, setForm] = useState({ doctorId: '', date: '' });
+  const [form, setForm] = useState({ doctorId: '', date: '', type: 'in-person' });
   const [msg, setMsg] = useState('');
 
   // Load patient's appointments
@@ -62,9 +60,11 @@ export default function PatientAppointments() {
   };
 
   const renderStatus = (status) => {
-    if (status === 'waitlisted') return <span className="badge waitlisted">⏳ Waitlisted</span>;
+    if (status === 'waitlisted') return <span className="badge waitlisted">Waitlisted</span>;
     if (status === 'booked') return <span className="badge booked">Booked</span>;
+    if (status === 'approved') return <span className="badge approved">Approved</span>;
     if (status === 'cancelled') return <span className="badge cancelled">Cancelled</span>;
+    if (status === 'completed') return <span className="badge completed">Completed</span>;
     return <span className="badge">{status}</span>;
   };
 
@@ -86,6 +86,14 @@ export default function PatientAppointments() {
           value={form.date}
           onChange={(e) => setForm({ ...form, date: e.target.value })}
         />
+        <select
+          className="input"
+          value={form.type}
+          onChange={(e) => setForm({ ...form, type: e.target.value })}
+        >
+          <option value="in-person">In-Person</option>
+          <option value="online">Online</option>
+        </select>
         <button className="btn" onClick={bookAppointment}>Book</button>
       </div>
 
@@ -98,12 +106,17 @@ export default function PatientAppointments() {
             <div>
               <strong>Doctor:</strong> {a.doctorId?.name || a.doctorId} <br />
               <strong>Hospital:</strong> {a.hospitalId?.name || 'N/A'} <br />
-              <strong>When:</strong> {new Date(a.date).toLocaleString()} <br />
+              <strong>When:</strong> {new Date(a.slotId?.date || a.date).toLocaleString()} <br />
+              <strong>Type:</strong> {a.type === 'online' ? 'Online' : 'In-Person'} <br />
               <strong>Status:</strong> {renderStatus(a.status)}
             </div>
             <div className="actions">
-              <button className="btn secondary" onClick={() => rescheduleAppointment(a._id)}>Reschedule</button>
-              <button className="btn danger" onClick={() => cancelAppointment(a._id)}>Cancel</button>
+              {a.status !== 'cancelled' && a.status !== 'completed' && (
+                <>
+                  <button className="btn secondary" onClick={() => rescheduleAppointment(a._id)}>Reschedule</button>
+                  <button className="btn danger" onClick={() => cancelAppointment(a._id)}>Cancel</button>
+                </>
+              )}
             </div>
           </li>
         ))}

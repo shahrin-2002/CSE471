@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
-import './Profile.css'; // Import the CSS file
+import './Profile.css';
 
 export default function Profile() {
   const { user, setUser } = useAuth();

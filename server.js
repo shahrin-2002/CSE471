@@ -18,6 +18,10 @@ const userRoutes = require('./routes/userRoutes');
 const documentRoutes = require('./routes/documentRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const medicalRecordRoutes = require('./routes/medicalRecordRoutes'); // ✅ NEW
+const icuRoutes = require('./routes/icuRoutes'); // ICU Booking
+const generalBedRoutes = require('./routes/generalBedRoutes'); // General Bed Booking
+const cabinRoutes = require('./routes/cabinRoutes'); // Cabin Booking
+// const videoCallRoutes = require('./routes/videoCallRoutes'); // Video Call - disabled for now
 
 const app = express();
 
@@ -53,6 +57,10 @@ app.use('/api/hospitals', hospitalRoutes);
 app.use('/api/doctors', doctorRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/records', medicalRecordRoutes); // ✅ mount medical records
+app.use('/api/icu', icuRoutes); // ICU Booking routes
+app.use('/api/general-bed', generalBedRoutes); // General Bed Booking routes
+app.use('/api/cabin', cabinRoutes); // Cabin Booking routes
+// app.use('/api/video-call', videoCallRoutes); // Video Call routes - disabled for now
 
 // Basic health check endpoint
 app.get('/health', (req, res) => {
@@ -111,6 +119,14 @@ app.listen(PORT, () => {
   console.log(`   - PATCH  http://127.0.0.1:${PORT}/api/records/:id`);
   console.log(`   - POST   http://127.0.0.1:${PORT}/api/records/:id/attachments`);
   console.log(`   - DELETE http://127.0.0.1:${PORT}/api/records/:id/attachments/:attachmentId`);
+  console.log(`   - GET    http://127.0.0.1:${PORT}/api/icu`);
+  console.log(`   - GET    http://127.0.0.1:${PORT}/api/icu/locations`);
+  console.log(`   - GET    http://127.0.0.1:${PORT}/api/icu/hospital/:hospitalId`);
+  console.log(`   - POST   http://127.0.0.1:${PORT}/api/icu/book`);
+  console.log(`   - POST   http://127.0.0.1:${PORT}/api/icu/waitlist`);
+  console.log(`   - GET    http://127.0.0.1:${PORT}/api/icu/my-bookings`);
+  console.log(`   - GET    http://127.0.0.1:${PORT}/api/icu/my-waitlist`);
+  console.log(`   - DELETE http://127.0.0.1:${PORT}/api/icu/booking/:bookingId`);
   console.log(`✅ Health check: http://127.0.0.1:${PORT}/health\n`);
 });
 

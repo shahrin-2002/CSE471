@@ -11,5 +11,7 @@ router.get('/mine', verifyToken, appointmentController.listMine);
 
 // Doctor endpoints
 router.get('/doctor/:doctorId', verifyToken, appointmentController.listForDoctor);
+router.patch('/:id/approve', verifyToken, appointmentController.approve);
+router.patch('/:id/complete', verifyToken, appointmentController.complete);
 
 module.exports = router;
