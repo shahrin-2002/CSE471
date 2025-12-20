@@ -21,7 +21,6 @@ const medicalRecordRoutes = require('./routes/medicalRecordRoutes'); // ✅ NEW
 const icuRoutes = require('./routes/icuRoutes'); // ICU Booking
 const generalBedRoutes = require('./routes/generalBedRoutes'); // General Bed Booking
 const cabinRoutes = require('./routes/cabinRoutes'); // Cabin Booking
-// const videoCallRoutes = require('./routes/videoCallRoutes'); // Video Call - disabled for now
 
 const app = express();
 
@@ -60,7 +59,6 @@ app.use('/api/records', medicalRecordRoutes); // ✅ mount medical records
 app.use('/api/icu', icuRoutes); // ICU Booking routes
 app.use('/api/general-bed', generalBedRoutes); // General Bed Booking routes
 app.use('/api/cabin', cabinRoutes); // Cabin Booking routes
-// app.use('/api/video-call', videoCallRoutes); // Video Call routes - disabled for now
 
 // Basic health check endpoint
 app.get('/health', (req, res) => {

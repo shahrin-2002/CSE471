@@ -83,15 +83,6 @@
   50% { opacity: 0.6; }
 }
 
-.btn.video-call {
-  background: #28a745;
-  color: white;
-}
-
-.btn.video-call:hover {
-  background: #218838;
-}
-
 .btn.secondary {
   background: #6c757d;
   color: white;
