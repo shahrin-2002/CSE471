@@ -11,7 +11,9 @@ export default function DoctorSlots() {
   // Load doctor's appointments
   const loadAppointments = async () => {
     try {
-      const { data } = await appointmentsAPI.doctor(user._id);
+      // Use doctorId (Doctor model ID) not user._id (User model ID)
+      const doctorId = user.doctorId || user._id;
+      const { data } = await appointmentsAPI.doctor(doctorId);
       setAppointments(data.appointments || []);
     } catch (err) {
       setMsg(err.response?.data?.error || 'Failed to load doctor appointments');
@@ -19,7 +21,7 @@ export default function DoctorSlots() {
   };
 
   useEffect(() => {
-    if (user) loadAppointments();
+    if (user?.doctorId || user?._id) loadAppointments();
   }, [user]);
 
   // Approve appointment

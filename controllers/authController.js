@@ -155,10 +155,21 @@ class AuthController {
           { expiresIn: '24h' }
         );
 
+        // Build user response
+        const userResponse = user.toJSON();
+
+        // If doctor, include the Doctor profile ID
+        if (user.role === 'doctor') {
+          const doctorProfile = await Doctor.findOne({ user_id: user._id });
+          if (doctorProfile) {
+            userResponse.doctorId = doctorProfile._id;
+          }
+        }
+
         return res.status(200).json({
           message: 'Login successful',
           token,
-          user: user.toJSON()
+          user: userResponse
         });
       }
 
@@ -234,10 +245,21 @@ class AuthController {
         { expiresIn: '24h' }
       );
 
+      // Build user response
+      const userResponse = user.toJSON();
+
+      // If doctor, include the Doctor profile ID
+      if (user.role === 'doctor') {
+        const doctorProfile = await Doctor.findOne({ user_id: user._id });
+        if (doctorProfile) {
+          userResponse.doctorId = doctorProfile._id;
+        }
+      }
+
       res.status(200).json({
         message: 'Login successful',
         token,
-        user: user.toJSON()
+        user: userResponse
       });
 
     } catch (error) {
