@@ -4,6 +4,7 @@
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { authAPI } from '../services/api';
+import socketService from '../services/socket';
 
 const AuthContext = createContext(null);
 
@@ -31,6 +32,20 @@ export const AuthProvider = ({ children }) => {
     }
     setLoading(false);
   }, []);
+
+  // Connect socket when user is authenticated
+  useEffect(() => {
+    if (token) {
+      socketService.connect(token);
+      console.log('[Auth] Socket connected for user');
+    } else {
+      socketService.disconnect();
+    }
+
+    return () => {
+      // Cleanup on unmount (but don't disconnect on re-renders)
+    };
+  }, [token]);
 
   // Login function
 // Replace the existing login function with this:
@@ -104,6 +119,7 @@ const verifyOtp = async (email, otp) => {
 
   // Logout function
   const logout = () => {
+    socketService.disconnect();
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setToken(null);

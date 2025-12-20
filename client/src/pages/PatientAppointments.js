@@ -18,9 +18,6 @@ export default function PatientAppointments() {
   const [incomingCall, setIncomingCall] = useState(null); // { appointmentId, doctorId, doctorName }
   const [activeCall, setActiveCall] = useState(null);
 
-  // Get token from localStorage
-  const token = localStorage.getItem('token');
-
   // Load patient's appointments
   const loadAppointments = async () => {
     try {
@@ -31,37 +28,34 @@ export default function PatientAppointments() {
     }
   };
 
-  // Connect socket on mount
+  // Set up socket listeners on mount
   useEffect(() => {
-    if (token) {
-      socketService.connect(token);
+    // Listen for incoming calls from doctor
+    socketService.onIncomingCall(({ appointmentId, doctorId, doctorName }) => {
+      console.log('[Patient] Incoming call:', { appointmentId, doctorId, doctorName });
+      setIncomingCall({ appointmentId, doctorId, doctorName });
+    });
 
-      // Listen for incoming calls from doctor
-      socketService.onIncomingCall(({ appointmentId, doctorId, doctorName }) => {
-        console.log('[Patient] Incoming call:', { appointmentId, doctorId, doctorName });
-        setIncomingCall({ appointmentId, doctorId, doctorName });
-      });
+    // Listen for call ended by doctor
+    socketService.onCallEnded(() => {
+      setActiveCall(null);
+      setIncomingCall(null);
+      setMsg('Call ended');
+    });
 
-      // Listen for call ended by doctor
-      socketService.onCallEnded(() => {
-        setActiveCall(null);
-        setIncomingCall(null);
-        setMsg('Call ended');
-      });
+    // Listen for appointment status updates (e.g., completed by doctor)
+    socketService.onAppointmentUpdated(({ appointmentId, status }) => {
+      console.log('[Patient] Appointment updated:', appointmentId, status);
+      setMsg(`Appointment marked as ${status} by doctor`);
+      loadAppointments(); // Refresh the list
+    });
 
-      // Listen for appointment status updates (e.g., completed by doctor)
-      socketService.onAppointmentUpdated(({ appointmentId, status }) => {
-        console.log('[Patient] Appointment updated:', appointmentId, status);
-        setMsg(`Appointment marked as ${status} by doctor`);
-        loadAppointments(); // Refresh the list
-      });
-
-      return () => {
-        socketService.removeAllListeners();
-        socketService.disconnect();
-      };
-    }
-  }, [token]);
+    return () => {
+      socketService.off('call:incoming');
+      socketService.off('call:ended');
+      socketService.off('appointment:updated');
+    };
+  }, []);
 
   useEffect(() => {
     loadAppointments();

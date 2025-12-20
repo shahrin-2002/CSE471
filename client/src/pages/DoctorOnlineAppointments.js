@@ -20,9 +20,6 @@ export default function DoctorOnlineAppointments() {
   const [callStates, setCallStates] = useState({}); // { appointmentId: 'idle' | 'waiting' | 'ready' }
   const [activeCall, setActiveCall] = useState(null); // { appointmentId, patientId, patientName }
 
-  // Get token from localStorage
-  const token = localStorage.getItem('token');
-
   // Load online appointments
   const loadAppointments = useCallback(async () => {
     try {
@@ -44,42 +41,39 @@ export default function DoctorOnlineAppointments() {
     }
   }, [user, callStates]);
 
-  // Connect socket on mount
+  // Set up socket listeners on mount
   useEffect(() => {
-    if (token) {
-      socketService.connect(token);
+    // Listen for patient ready
+    socketService.onPatientReady(({ appointmentId }) => {
+      setCallStates(prev => ({ ...prev, [appointmentId]: 'ready' }));
+      setMsg('Patient is ready for the call!');
+    });
 
-      // Listen for patient ready
-      socketService.onPatientReady(({ appointmentId }) => {
-        setCallStates(prev => ({ ...prev, [appointmentId]: 'ready' }));
-        setMsg('Patient is ready for the call!');
-      });
+    // Listen for patient decline
+    socketService.onCallDeclined(({ appointmentId }) => {
+      setCallStates(prev => ({ ...prev, [appointmentId]: 'idle' }));
+      setMsg('Patient declined the call');
+    });
 
-      // Listen for patient decline
-      socketService.onCallDeclined(({ appointmentId }) => {
-        setCallStates(prev => ({ ...prev, [appointmentId]: 'idle' }));
-        setMsg('Patient declined the call');
-      });
-
-      // Listen for call errors
-      socketService.onCallError(({ message }) => {
-        setMsg(message);
-        // Reset all waiting states to idle
-        setCallStates(prev => {
-          const updated = { ...prev };
-          Object.keys(updated).forEach(key => {
-            if (updated[key] === 'waiting') updated[key] = 'idle';
-          });
-          return updated;
+    // Listen for call errors
+    socketService.onCallError(({ message }) => {
+      setMsg(message);
+      // Reset all waiting states to idle
+      setCallStates(prev => {
+        const updated = { ...prev };
+        Object.keys(updated).forEach(key => {
+          if (updated[key] === 'waiting') updated[key] = 'idle';
         });
+        return updated;
       });
+    });
 
-      return () => {
-        socketService.removeAllListeners();
-        socketService.disconnect();
-      };
-    }
-  }, [token]);
+    return () => {
+      socketService.off('call:patient-ready');
+      socketService.off('call:declined');
+      socketService.off('call:error');
+    };
+  }, []);
 
   // Load appointments on mount
   useEffect(() => {
