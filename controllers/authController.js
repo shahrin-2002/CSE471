@@ -208,7 +208,19 @@ class AuthController {
       if (!user) {
         return res.status(404).json({ error: 'User Not Found', message: 'User profile not found' });
       }
-      res.status(200).json({ message: 'Profile retrieved successfully', user: user.toJSON() });
+
+      // Build user response
+      const userResponse = user.toJSON();
+
+      // If doctor, include the Doctor profile ID
+      if (user.role === 'doctor') {
+        const doctorProfile = await Doctor.findOne({ user_id: user._id });
+        if (doctorProfile) {
+          userResponse.doctorId = doctorProfile._id;
+        }
+      }
+
+      res.status(200).json({ message: 'Profile retrieved successfully', user: userResponse });
     } catch (error) {
       console.error('Get profile error:', error);
       res.status(500).json({ error: 'Internal Server Error', message: 'An error occurred while fetching profile' });
