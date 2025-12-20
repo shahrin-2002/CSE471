@@ -79,22 +79,29 @@ io.on('connection', (socket) => {
       const doctor = await Doctor.findById(appt.doctorId);
       const doctorName = doctor?.name || 'Doctor';
 
+      // Convert patientId to string for consistent lookup
+      const patientIdStr = patientId.toString();
+
       // Store call state
       activeCalls.set(appointmentId, {
         doctorId: socket.userId,
-        patientId: patientId,
+        patientId: patientIdStr,
         status: 'pending'
       });
 
+      // Debug: Log all connected users
+      console.log(`[Socket] Looking for patient: ${patientIdStr}`);
+      console.log(`[Socket] Connected users:`, Array.from(userSockets.keys()));
+
       // Send notification to patient
-      const patientSocketId = userSockets.get(patientId);
+      const patientSocketId = userSockets.get(patientIdStr);
       if (patientSocketId) {
         io.to(patientSocketId).emit('call:incoming', {
           appointmentId,
           doctorId: socket.userId,
           doctorName
         });
-        console.log(`[Socket] Call initiated: ${socket.userId} -> ${patientId}`);
+        console.log(`[Socket] Call initiated: ${socket.userId} -> ${patientIdStr}`);
       } else {
         socket.emit('call:error', { message: 'Patient is not online' });
         activeCalls.delete(appointmentId);
