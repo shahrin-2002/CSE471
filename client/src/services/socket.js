@@ -11,7 +11,10 @@ class SocketService {
   socket = null;
 
   connect(token) {
-    if (this.socket?.connected) return;
+    if (this.socket?.connected) {
+      console.log('[Socket] Already connected:', this.socket.id);
+      return;
+    }
 
     this.socket = io(SOCKET_URL, {
       auth: { token },
@@ -28,6 +31,11 @@ class SocketService {
 
     this.socket.on('call:error', ({ message }) => {
       console.error('[Socket] Call error:', message);
+    });
+
+    // Debug: Log all incoming events
+    this.socket.onAny((event, ...args) => {
+      console.log('[Socket] Event received:', event, args);
     });
   }
 
