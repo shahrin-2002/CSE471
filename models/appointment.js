@@ -20,4 +20,4 @@ const appointmentSchema = new mongoose.Schema({
   promotedAt: { type: Date }
 }, { timestamps: true });
 
-module.exports = mongoose.model('Appointment', appointmentSchema);
+module.exports = mongoose.models.Appointment || mongoose.model('Appointment', appointmentSchema); 
