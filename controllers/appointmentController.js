@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const Slot = require('../models/slot');
-const Appointment = require('../models/Appointment');
+const Appointment = require('../models/appointment');
 
 // Helper: find or create a slot
 async function findOrCreateSlot(doctorId, date, capacity = 5) {

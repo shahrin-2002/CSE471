@@ -1,11 +1,25 @@
+/**
+ * Patient Appointments Page
+ * Shows patient's appointments with incoming video call handling
+ */
+
 import { useEffect, useState } from 'react';
 import { appointmentsAPI } from '../services/api';
+import socketService from '../services/socket';
+import VideoCallModal from '../components/VideoCallModal';
 import '../PatientAppointment.css';
 
 export default function PatientAppointments() {
   const [appointments, setAppointments] = useState([]);
   const [form, setForm] = useState({ doctorId: '', date: '', type: 'in-person' });
   const [msg, setMsg] = useState('');
+
+  // Video call state
+  const [incomingCall, setIncomingCall] = useState(null); // { appointmentId, doctorId, doctorName }
+  const [activeCall, setActiveCall] = useState(null);
+
+  // Get token from localStorage
+  const token = localStorage.getItem('token');
 
   // Load patient's appointments
   const loadAppointments = async () => {
@@ -17,9 +31,63 @@ export default function PatientAppointments() {
     }
   };
 
+  // Connect socket on mount
+  useEffect(() => {
+    if (token) {
+      socketService.connect(token);
+
+      // Listen for incoming calls from doctor
+      socketService.onIncomingCall(({ appointmentId, doctorId, doctorName }) => {
+        console.log('[Patient] Incoming call:', { appointmentId, doctorId, doctorName });
+        setIncomingCall({ appointmentId, doctorId, doctorName });
+      });
+
+      // Listen for call ended by doctor
+      socketService.onCallEnded(() => {
+        setActiveCall(null);
+        setIncomingCall(null);
+        setMsg('Call ended');
+      });
+
+      // Listen for appointment status updates (e.g., completed by doctor)
+      socketService.onAppointmentUpdated(({ appointmentId, status }) => {
+        console.log('[Patient] Appointment updated:', appointmentId, status);
+        setMsg(`Appointment marked as ${status} by doctor`);
+        loadAppointments(); // Refresh the list
+      });
+
+      return () => {
+        socketService.removeAllListeners();
+        socketService.disconnect();
+      };
+    }
+  }, [token]);
+
   useEffect(() => {
     loadAppointments();
   }, []);
+
+  // Accept call and signal ready
+  const acceptCall = () => {
+    if (incomingCall) {
+      socketService.confirmReady(incomingCall.appointmentId, incomingCall.doctorId);
+      setActiveCall(incomingCall);
+      setIncomingCall(null);
+    }
+  };
+
+  // Decline call
+  const declineCall = () => {
+    if (incomingCall) {
+      socketService.declineCall(incomingCall.appointmentId, incomingCall.doctorId);
+      setIncomingCall(null);
+    }
+  };
+
+  // Close video call
+  const closeVideoCall = () => {
+    setActiveCall(null);
+  };
 
   // Book new appointment
   const bookAppointment = async () => {
@@ -121,6 +189,40 @@ export default function PatientAppointments() {
           </li>
         ))}
       </ul>
+
+      {/* Incoming Call Notification */}
+      {incomingCall && (
+        <div className="incoming-call-overlay">
+          <div className="incoming-call-modal">
+            <div className="call-icon">
+              <span className="ring-animation"></span>
+              <span className="phone-icon">📞</span>
+            </div>
+            <h3>Incoming Video Call</h3>
+            <p>Dr. {incomingCall.doctorName} is calling...</p>
+            <div className="call-actions">
+              <button className="btn-accept" onClick={acceptCall}>
+                Ready
+              </button>
+              <button className="btn-decline" onClick={declineCall}>
+                Decline
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Video Call Modal */}
+      {activeCall && (
+        <VideoCallModal
+          isOpen={!!activeCall}
+          onClose={closeVideoCall}
+          appointmentId={activeCall.appointmentId}
+          remoteUserId={activeCall.doctorId}
+          remoteUserName={`Dr. ${activeCall.doctorName}`}
+          isInitiator={false}
+        />
+      )}
     </div>
   );
 }

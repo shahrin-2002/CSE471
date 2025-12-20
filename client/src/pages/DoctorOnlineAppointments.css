@@ -254,6 +254,56 @@
   50% { box-shadow: 0 0 20px rgba(40, 167, 69, 0.5); }
 }
 
+/* Appointment Actions */
+.appointment-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #f0f0f0;
+}
+
+/* Join Call Button (patient ready) */
+.btn-join-call {
+  width: 100%;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  animation: pulse-blue 1.5s infinite;
+}
+
+.btn-join-call:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(0, 123, 255, 0.4);
+}
+
+@keyframes pulse-blue {
+  0%, 100% { box-shadow: 0 0 5px rgba(0, 123, 255, 0.3); }
+  50% { box-shadow: 0 0 20px rgba(0, 123, 255, 0.6); }
+}
+
+/* Cancel Waiting Button */
+.btn-cancel-waiting {
+  padding: 8px 16px;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  margin-left: auto;
+}
+
+.btn-cancel-waiting:hover {
+  background: #c82333;
+}
+
 /* Complete Section */
 .complete-section {
   margin-top: 15px;
