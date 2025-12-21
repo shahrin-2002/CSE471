@@ -15,31 +15,44 @@ const api = axios.create({
   },
 });
 
-// Add request interceptor to include auth token
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
 // Add response interceptor to handle errors
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Token expired or invalid
+    // 1. Get the URL that failed (safely)
+    const url = error.config ? error.config.url : '';
+    
+    // 2. Check if this was a Login or OTP request
+    // We check for both so verifyOtp (401) doesn't kick you out too
+    const isAuthRequest = url.includes('login') || url.includes('verify-otp');
+
+    // 3. Only redirect if it's 401 AND NOT an auth request
+    if (error.response?.status === 401 && !isAuthRequest) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
     }
+    
     return Promise.reject(error);
   }
 );
+
+// Attach Authorization header automatically when token exists
+api.interceptors.request.use((config) => {
+  try {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers = config.headers || {};
+      // If token was accidentally stored as the string 'undefined' or 'null', ignore it
+      if (token !== 'undefined' && token !== 'null') {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
+  return config;
+});
 
 // =======================
 // Auth API endpoints
@@ -189,6 +202,16 @@ export const cabinAPI = {
 
   // Cancel Cabin booking
   cancelBooking: (bookingId) => api.delete(`/cabin/booking/${bookingId}`),
+};
+
+export const prescriptionAPI = {
+  create: (data) => api.post('/prescriptions/create', data),
+  get: (id) => api.get(`/prescriptions/${id}`),
+};
+
+export const ambulanceAPI = {
+  book: (data) => api.post('/ambulance/book', data),
+  getStatus: (id) => api.get(`/ambulance/status/${id}`),
 };
 
 export default api;

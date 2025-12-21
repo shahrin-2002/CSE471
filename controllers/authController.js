@@ -137,13 +137,16 @@ class AuthController {
         return res.status(400).json({ error: 'Validation Error', message: 'Email and password required' });
       }
 
-      const user = await User.findByEmail(email);
+  const user = await User.findByEmail(email);
       if (!user) {
+        console.warn(`[Auth] Login attempt failed - user not found: ${email}`);
         return res.status(401).json({ error: 'Auth Failed', message: 'Invalid credentials' });
       }
 
       const isMatch = await user.comparePassword(password);
+      console.log(`[Auth] Password compare for ${email}: ${isMatch}`);
       if (!isMatch) {
+        console.warn(`[Auth] Login attempt failed - invalid password for: ${email}`);
         return res.status(401).json({ error: 'Auth Failed', message: 'Invalid credentials' });
       }
 

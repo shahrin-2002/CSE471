@@ -20,10 +20,14 @@ const appointmentRoutes = require('./routes/appointmentRoutes');
 const userRoutes = require('./routes/userRoutes');
 const documentRoutes = require('./routes/documentRoutes');
 const adminRoutes = require('./routes/adminRoutes');
-const medicalRecordRoutes = require('./routes/medicalRecordRoutes'); // ✅ NEW
-const icuRoutes = require('./routes/icuRoutes'); // ICU Booking
-const generalBedRoutes = require('./routes/generalBedRoutes'); // General Bed Booking
-const cabinRoutes = require('./routes/cabinRoutes'); // Cabin Booking
+const medicalRecordRoutes = require('./routes/medicalRecordRoutes'); 
+const icuRoutes = require('./routes/icuRoutes'); 
+const generalBedRoutes = require('./routes/generalBedRoutes'); 
+const cabinRoutes = require('./routes/cabinRoutes');
+
+// [NEW] Import new feature routes
+const prescriptionRoutes = require('./routes/prescriptionRoutes');
+const ambulanceRoutes = require('./routes/ambulanceRoutes');
 
 // Import models for Socket.io handlers
 const Appointment = require('./models/appointment');
@@ -41,8 +45,11 @@ const io = new Server(httpServer, {
   }
 });
 
+// [NEW] Make Socket.io accessible to controllers (Critical for Ambulance feature)
+app.set('io', io);
+
 // In-memory storage for video calls
-const userSockets = new Map(); // oderId -> socketId
+const userSockets = new Map(); // orderId -> socketId
 const activeCalls = new Map(); // appointmentId -> { doctorId, patientId, status }
 
 // Socket.io JWT authentication middleware
@@ -65,6 +72,9 @@ io.use((socket, next) => {
 io.on('connection', (socket) => {
   console.log(`[Socket] User connected: ${socket.userId} (${socket.userRole})`);
   userSockets.set(socket.userId, socket.id);
+
+  // Join a personal room for targeted notifications (Ambulance updates)
+  socket.join(`user_${socket.userId}`);
 
   // Doctor initiates call to patient
   socket.on('call:initiate', async ({ appointmentId, patientId }) => {
@@ -248,10 +258,14 @@ app.use('/api/auth', initAuthRoutes());
 app.use('/api/hospitals', hospitalRoutes);
 app.use('/api/doctors', doctorRoutes);
 app.use('/api/appointments', appointmentRoutes);
-app.use('/api/records', medicalRecordRoutes); // ✅ mount medical records
-app.use('/api/icu', icuRoutes); // ICU Booking routes
-app.use('/api/general-bed', generalBedRoutes); // General Bed Booking routes
-app.use('/api/cabin', cabinRoutes); // Cabin Booking routes
+app.use('/api/records', medicalRecordRoutes); 
+app.use('/api/icu', icuRoutes); 
+app.use('/api/general-bed', generalBedRoutes); 
+app.use('/api/cabin', cabinRoutes);
+
+// [NEW] Register new feature routes
+app.use('/api/prescriptions', prescriptionRoutes);
+app.use('/api/ambulance', ambulanceRoutes);
 
 // Basic health check endpoint
 app.get('/health', (req, res) => {
@@ -284,40 +298,8 @@ httpServer.listen(PORT, () => {
   console.log(`📝 Endpoints available:`);
   console.log(`   - POST   http://127.0.0.1:${PORT}/api/auth/signup`);
   console.log(`   - POST   http://127.0.0.1:${PORT}/api/auth/login`);
-  console.log(`   - GET    http://127.0.0.1:${PORT}/api/hospitals`);
-  console.log(`   - GET    http://127.0.0.1:${PORT}/api/hospitals/:id`);
-  console.log(`   - POST   http://127.0.0.1:${PORT}/api/hospitals`);
-  console.log(`   - GET    http://127.0.0.1:${PORT}/api/doctors`);
-  console.log(`   - GET    http://127.0.0.1:${PORT}/api/doctors/:id`);
-  console.log(`   - POST   http://127.0.0.1:${PORT}/api/doctors`);
-  console.log(`   - GET    http://127.0.0.1:${PORT}/api/users/me`);
-  console.log(`   - PUT    http://127.0.0.1:${PORT}/api/users/me`);
-  console.log(`   - POST   http://127.0.0.1:${PORT}/api/documents`);
-  console.log(`   - GET    http://127.0.0.1:${PORT}/api/documents/preview/:filename`);
-  console.log(`   - DELETE http://127.0.0.1:${PORT}/api/documents/:id`);
-  console.log(`   - GET    http://127.0.0.1:${PORT}/api/admin/documents`);
-  console.log(`   - PATCH  http://127.0.0.1:${PORT}/api/admin/documents/:id/verify`);
-  console.log(`   - PATCH  http://127.0.0.1:${PORT}/api/admin/documents/:id/reject`);
-  console.log(`   - PATCH  http://127.0.0.1:${PORT}/api/admin/users/:id/lock`);
-  console.log(`   - POST   http://127.0.0.1:${PORT}/api/appointments/book`);
-  console.log(`   - PATCH  http://127.0.0.1:${PORT}/api/appointments/:id/reschedule`);
-  console.log(`   - DELETE http://127.0.0.1:${PORT}/api/appointments/:id/cancel`);
-  console.log(`   - GET    http://127.0.0.1:${PORT}/api/appointments/mine`);
-  console.log(`   - GET    http://127.0.0.1:${PORT}/api/appointments/doctor/:doctorId`);
-  console.log(`   - GET    http://127.0.0.1:${PORT}/api/records/mine`);
-  console.log(`   - POST   http://127.0.0.1:${PORT}/api/records`);
-  console.log(`   - GET    http://127.0.0.1:${PORT}/api/records/:patientId`);
-  console.log(`   - PATCH  http://127.0.0.1:${PORT}/api/records/:id`);
-  console.log(`   - POST   http://127.0.0.1:${PORT}/api/records/:id/attachments`);
-  console.log(`   - DELETE http://127.0.0.1:${PORT}/api/records/:id/attachments/:attachmentId`);
-  console.log(`   - GET    http://127.0.0.1:${PORT}/api/icu`);
-  console.log(`   - GET    http://127.0.0.1:${PORT}/api/icu/locations`);
-  console.log(`   - GET    http://127.0.0.1:${PORT}/api/icu/hospital/:hospitalId`);
-  console.log(`   - POST   http://127.0.0.1:${PORT}/api/icu/book`);
-  console.log(`   - POST   http://127.0.0.1:${PORT}/api/icu/waitlist`);
-  console.log(`   - GET    http://127.0.0.1:${PORT}/api/icu/my-bookings`);
-  console.log(`   - GET    http://127.0.0.1:${PORT}/api/icu/my-waitlist`);
-  console.log(`   - DELETE http://127.0.0.1:${PORT}/api/icu/booking/:bookingId`);
+  console.log(`   - POST   http://127.0.0.1:${PORT}/api/prescriptions/create`); // Check this one!
+  console.log(`   - POST   http://127.0.0.1:${PORT}/api/ambulance/book`);
   console.log(`✅ Health check: http://127.0.0.1:${PORT}/health\n`);
 });
 

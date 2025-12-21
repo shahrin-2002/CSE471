@@ -24,6 +24,8 @@ import DoctorOnlineAppointments from './pages/DoctorOnlineAppointments';
 import ICUBooking from './pages/ICUBooking';
 import GeneralBedBooking from './pages/GeneralBedBooking';
 import CabinBooking from './pages/CabinBooking';
+import DoctorPrescribe from './pages/DoctorPrescribe'; // [NEW]
+import AmbulanceBooking from './pages/AmbulanceBooking'; // [NEW]
 import './App.css';
 
 // Protected Route Component
@@ -170,6 +172,16 @@ function AppContent() {
             </ProtectedRoute>
           }
         />
+        {/* Doctor Route */}
+        <Route path="/doctor/prescribe" element={
+          <ProtectedRoute>
+            <RoleGuard role="doctor"><DoctorPrescribe /></RoleGuard>
+          </ProtectedRoute>
+        } />
+        {/* Patient Route */}
+        <Route path="/ambulance" element={
+          <ProtectedRoute><AmbulanceBooking /></ProtectedRoute>
+        } />
 
         {/* 404 - Catch all */}
         <Route path="*" element={<Navigate to="/login" />} />

@@ -52,33 +52,47 @@ export const AuthProvider = ({ children }) => {
 const login = async (email, password) => {
     try {
       const response = await authAPI.login({ email, password });
-      
-      // Check if the backend is asking for an OTP
-      if (response.data.requiresOtp) {
-        return { 
-          success: false, 
-          requiresOtp: true, 
-          email: response.data.email 
+
+      // Helpful debug log for developers
+      console.log('[Auth] login response', response?.status, response?.data);
+
+      // Normalized handling depending on backend shape
+      const data = response?.data || {};
+
+      // If backend asks for OTP
+      if (data.requiresOtp) {
+        return {
+          success: false,
+          requiresOtp: true,
+          email: data.email,
         };
       }
 
-      // Standard Login (Fallback or if 2FA is disabled)
-      // Note: Fixed typo from 'nVToken' to 'token'
-      const { token: newToken, user: newUser } = response.data;
+      // If backend returned token & user (standard login)
+      if (data.token) {
+        const newToken = data.token;
+        const newUser = data.user || {};
 
-      localStorage.setItem('token', newToken);
-      localStorage.setItem('user', JSON.stringify(newUser));
+        if (newToken) {
+          localStorage.setItem('token', newToken);
+          localStorage.setItem('user', JSON.stringify(newUser));
 
-      setToken(newToken);
-      setUser(newUser);
+          setToken(newToken);
+          setUser(newUser);
 
-      // ✅ Return user so Login.js can redirect based on role
-      return { success: true, user: newUser };
-    } catch (error) {
+          return { success: true, user: newUser };
+        }
+      }
+
+      // Unexpected but non-error response
       return {
         success: false,
-        error: error.response?.data?.error || 'Login failed',
+        error: data.error || data.message || 'Unexpected response from server',
       };
+    } catch (error) {
+      console.error('[Auth] login error', error.response?.data || error.message);
+      const errMsg = error.response?.data?.message || error.response?.data?.error || error.message || 'Login failed';
+      return { success: false, error: errMsg };
     }
   };
 
@@ -155,7 +169,7 @@ const value = {
     logout,
     getProfile,
     isAuthenticated: !!token,
-    setUser, // expose setUser for profile updates
+  // expose setUser for profile updates (already exported above)
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,8 +1,3 @@
-/**
- * Dashboard Page - After successful login
- * Updated to include Doctor Availability Button
- */
-
 import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -77,11 +72,7 @@ const Dashboard = () => {
                 <p><strong>Email:</strong> {user.email}</p>
                 <p><strong>Role:</strong> {user.role}</p>
                 {user.gender && <p><strong>Gender:</strong> {user.gender}</p>}
-                {user.date_of_birth && (
-                  <p><strong>Date of Birth:</strong> {user.date_of_birth}</p>
-                )}
                 {user.phone && <p><strong>Phone:</strong> {user.phone}</p>}
-                {user.address && <p><strong>Address:</strong> {user.address}</p>}
               </div>
 
               {/* Quick Links */}
@@ -102,8 +93,21 @@ const Dashboard = () => {
                           🕒 Manage Availability
                         </button>
                       </Link>
+                      {/* [NEW] Prescription Button */}
+                      <Link to="/doctor/prescribe">
+                        <button className="btn-submit" style={{ padding: '10px 20px', backgroundColor: '#007bff', color: 'white' }}>
+                          💊 Write Prescription
+                        </button>
+                      </Link>
                     </>
                   )}
+
+                  {/* [NEW] Ambulance Button (Available for all) */}
+                  <Link to="/ambulance">
+                    <button className="btn-submit" style={{ padding: '10px 20px', backgroundColor: '#dc3545', color: 'white' }}>
+                      🚑 Book Ambulance
+                    </button>
+                  </Link>
 
                   <Link to="/hospitals">
                     <button className="btn-submit" style={{ padding: '10px 20px' }}>
