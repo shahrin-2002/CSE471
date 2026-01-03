@@ -47,12 +47,16 @@ export default function VideoCallModal({
           return;
         }
 
-        // Set video elements
+        // Set video elements (with iOS Safari fix)
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = localStream;
+          // iOS Safari requires explicit play() call
+          localVideoRef.current.play().catch(e => console.log('[VideoCall] Local video play:', e));
         }
         if (remoteVideoRef.current) {
           remoteVideoRef.current.srcObject = remoteStream;
+          // iOS Safari requires explicit play() call
+          remoteVideoRef.current.play().catch(e => console.log('[VideoCall] Remote video play:', e));
         }
 
         // Handle ICE candidates - send to remote peer
@@ -159,6 +163,7 @@ export default function VideoCallModal({
             className="remote-video"
             autoPlay
             playsInline
+            webkit-playsinline="true"
           />
 
           {/* Local video (picture-in-picture) */}
@@ -167,6 +172,7 @@ export default function VideoCallModal({
             className="local-video"
             autoPlay
             playsInline
+            webkit-playsinline="true"
             muted
           />
 

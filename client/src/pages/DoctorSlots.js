@@ -59,7 +59,12 @@ export default function DoctorSlots() {
 
   return (
     <div className="card">
-      <h2>My Appointments (Doctor)</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+        <h2 style={{ margin: 0 }}>My Appointments (Doctor)</h2>
+        <button className="btn" onClick={loadAppointments} style={{ padding: '8px 16px' }}>
+          🔄 Refresh
+        </button>
+      </div>
       {msg && <p className="kicker">{msg}</p>}
 
       {/* Appointment list */}

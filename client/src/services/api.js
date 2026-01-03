@@ -37,17 +37,19 @@ api.interceptors.response.use(
   }
 );
 
-// Attach Authorization header automatically when token exists
+// Attach Authorization header and prevent caching
 api.interceptors.request.use((config) => {
   try {
     const token = localStorage.getItem('token');
-    if (token) {
-      config.headers = config.headers || {};
-      // If token was accidentally stored as the string 'undefined' or 'null', ignore it
-      if (token !== 'undefined' && token !== 'null') {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
+    config.headers = config.headers || {};
+
+    if (token && token !== 'undefined' && token !== 'null') {
+      config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // Prevent browser caching of API responses
+    config.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+    config.headers['Pragma'] = 'no-cache';
   } catch (e) {
     // ignore
   }

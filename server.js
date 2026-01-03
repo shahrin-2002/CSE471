@@ -30,7 +30,7 @@ const prescriptionRoutes = require('./routes/prescriptionRoutes');
 const ambulanceRoutes = require('./routes/ambulanceRoutes');
 
 // Import models for Socket.io handlers
-const Appointment = require('./models/appointment');
+const Appointment = require('./models/Appointment');
 const Doctor = require('./models/Doctor');
 
 const app = express();
@@ -39,7 +39,14 @@ const app = express();
 const httpServer = http.createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
+    origin: [
+      'http://localhost:3000',
+      'http://localhost:3005',
+      'http://127.0.0.1:3000',
+      'https://healthconnect-cse471.vercel.app',
+      /\.vercel\.app$/,  // Allow all vercel.app subdomains
+      /\.up\.railway\.app$/  // Allow Railway domains
+    ],
     methods: ['GET', 'POST'],
     credentials: true
   }
