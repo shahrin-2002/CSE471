@@ -43,9 +43,9 @@ const io = new Server(httpServer, {
       'http://localhost:3000',
       'http://localhost:3005',
       'http://127.0.0.1:3000',
-      'https://client-shahrins-projects.vercel.app',
-      'https://client-4hjxl7ups-shahrins-projects.vercel.app',
-      /\.vercel\.app$/  // Allow all vercel.app subdomains
+      'https://healthconnect-cse471.vercel.app',
+      /\.vercel\.app$/,  // Allow all vercel.app subdomains
+      /\.up\.railway\.app$/  // Allow Railway domains
     ],
     methods: ['GET', 'POST'],
     credentials: true
