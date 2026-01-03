@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { prescriptionAPI } from '../services/api';
 import '../styles/Auth.css'; // Re-use auth styles
 
 const DoctorPrescribe = () => {
   const navigate = useNavigate();
-  const { state } = useLocation();
+  const { state } = useLocation(); // Receives data from DoctorOnlineAppointments
   
   // Initialize medications
   const [medications, setMedications] = useState([
@@ -14,6 +14,14 @@ const DoctorPrescribe = () => {
   const [diagnosis, setDiagnosis] = useState('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Safety check: Redirect if accessed directly without an appointment
+  useEffect(() => {
+    if (!state?.appointmentId) {
+      alert("Please select an appointment from 'Online Appointments' first.");
+      navigate('/doctor/online-appointments');
+    }
+  }, [state, navigate]);
 
   const addMedication = () => {
     setMedications([...medications, { drug: '', dosage: '', frequency: '', duration: '' }]);
@@ -35,13 +43,19 @@ const DoctorPrescribe = () => {
     setLoading(true);
     try {
       await prescriptionAPI.create({
-        patientId: state?.patientId || '', // Handles empty state for testing
+        patientId: state?.patientId,
+        appointmentId: state?.appointmentId,
         medications,
         diagnosis,
         notes
       });
-      alert('✅ Prescription Created & PDF Generated Successfully!');
-      navigate('/dashboard');
+      alert('✅ Prescription Sent Successfully!');
+      
+      // ---------------------------------------------------------
+      // CHANGED: Redirect back to Online Appointments page
+      // ---------------------------------------------------------
+      navigate('/doctor/online-appointments');
+      
     } catch (err) {
       console.error(err);
       alert('❌ Failed to create prescription. Check console for details.');
@@ -64,11 +78,10 @@ const DoctorPrescribe = () => {
         <div className="nav-logo"><span>🏥</span></div>
         <ul className="nav-links">
           <li><Link to="/dashboard">Dashboard</Link></li>
-          <li><Link to="/doctors">Doctors</Link></li>
-          <li><Link to="/appointments">Appointments</Link></li>
+          <li><Link to="/doctor/online-appointments">Online Appointments</Link></li>
         </ul>
         <div className="nav-buttons">
-          <Link to="/dashboard"><button className="btn-dark">Back</button></Link>
+          <button className="btn-dark" onClick={() => navigate('/doctor/online-appointments')}>Back</button>
         </div>
       </nav>
 
@@ -76,9 +89,11 @@ const DoctorPrescribe = () => {
       <div className="auth-content">
         <div className="auth-card" style={{ maxWidth: '800px', width: '95%' }}>
           <h2>💊 Write New Prescription</h2>
-          <p style={{marginBottom: '20px', color: '#666'}}>
-            {state?.patientId ? `Prescribing for Patient ID: ${state.patientId}` : 'Creating new prescription'}
-          </p>
+          
+          <div style={{backgroundColor: '#e9ecef', padding: '10px', borderRadius: '5px', marginBottom: '15px'}}>
+            <strong>Patient:</strong> {state?.patientName || 'Unknown'} <br/>
+            <strong>Appointment ID:</strong> {state?.appointmentId}
+          </div>
 
           <form onSubmit={handleSubmit}>
             <div className="form-group">
@@ -132,7 +147,7 @@ const DoctorPrescribe = () => {
             </div>
             
             <button type="submit" className="btn-submit" disabled={loading}>
-              {loading ? 'Generating PDF...' : 'Generate PDF & QR Code'}
+              {loading ? 'Sending...' : 'Send Prescription'}
             </button>
           </form>
         </div>

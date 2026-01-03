@@ -4,6 +4,7 @@
  */
 
 import { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom'; // 1. Added Hook
 import { useAuth } from '../context/AuthContext';
 import { appointmentsAPI } from '../services/api';
 import socketService from '../services/socket';
@@ -12,6 +13,7 @@ import './DoctorOnlineAppointments.css';
 
 export default function DoctorOnlineAppointments() {
   const { user } = useAuth();
+  const navigate = useNavigate(); // 2. Initialize Hook
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState('');
@@ -130,6 +132,17 @@ export default function DoctorOnlineAppointments() {
     }
   };
 
+  // 3. New Function to handle navigation to prescription page
+  const handlePrescribe = (appointment) => {
+    navigate('/doctor/prescribe', { 
+      state: { 
+        patientId: appointment.patientId?._id,
+        patientName: appointment.patientId?.name, 
+        appointmentId: appointment._id 
+      } 
+    });
+  };
+
   if (loading) {
     return (
       <div className="online-appointments-container">
@@ -230,6 +243,20 @@ export default function DoctorOnlineAppointments() {
                   </button>
                 </div>
               )}
+
+              {/* 4. Show Prescribe Button ONLY when completed */}
+              {appt.status === 'completed' && (
+                <div className="appointment-actions">
+                  <button
+                    className="btn-start-call"
+                    style={{ backgroundColor: '#28a745', width: '100%' }}
+                    onClick={() => handlePrescribe(appt)}
+                  >
+                    Write Prescription
+                  </button>
+                </div>
+              )}
+
             </div>
           ))}
         </div>

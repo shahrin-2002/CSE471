@@ -5,11 +5,10 @@ const path = require('path');
 const Prescription = require('../models/Prescription');
 const User = require('../models/User');
 const Doctor = require('../models/Doctor');
+const sendEmail = require('../utils/emailService'); // 1. Import Email Service
 
 exports.createPrescription = async (req, res) => {
   console.log('--- STARTING PRESCRIPTION GENERATION ---');
-  console.log('Request Body:', req.body);
-  console.log('User ID from Token:', req.user.id);
 
   try {
     const { appointmentId, medications, diagnosis, notes } = req.body;
@@ -17,32 +16,21 @@ exports.createPrescription = async (req, res) => {
 
     // 1. Find the Doctor profile
     const doctor = await Doctor.findOne({ user_id: req.user.id }).populate('hospital_id');
-    
-    if (!doctor) {
-      console.error('❌ Error: Doctor profile not found for user', req.user.id);
-      return res.status(404).json({ error: 'Doctor profile not found. Are you registered as a doctor?' });
-    }
-    console.log('✅ Doctor Found:', doctor.name);
+    if (!doctor) return res.status(404).json({ error: 'Doctor profile not found.' });
 
-    // 2. Handle Missing Patient ID (For Testing)
+    // 2. Validate/Find Patient
     if (!patientId) {
-      console.log('⚠️ No Patient ID provided. Using a dummy/random patient for testing.');
-      // Try to find ANY patient to use as a placeholder
+      // Logic for testing/dummy patient if needed
       const dummyPatient = await User.findOne({ role: 'patient' });
-      if (dummyPatient) {
-        patientId = dummyPatient._id;
-        console.log('✅ Using Dummy Patient:', dummyPatient.name);
-      } else {
-        // If no patients exist, use the doctor's user ID temporarily
-        patientId = req.user.id;
-        console.log('⚠️ No patients found in DB. Using Doctor user ID as Patient.');
-      }
+      patientId = dummyPatient ? dummyPatient._id : req.user.id;
     }
 
-    // 3. Generate unique verification code
+    const patient = await User.findById(patientId);
+    if (!patient) return res.status(404).json({ error: 'Patient not found' });
+
+    // 3. Generate Codes & DB Entry
     const verificationCode = `${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     
-    // 4. Create DB Entry
     const prescription = await Prescription.create({
       doctorId: doctor._id,
       patientId,
@@ -52,26 +40,13 @@ exports.createPrescription = async (req, res) => {
       notes,
       verificationCode
     });
-    console.log('✅ Database Entry Created:', prescription._id);
 
-    // 5. Fetch patient details for PDF
-    const patient = await User.findById(patientId);
-    const patientName = patient ? patient.name : 'Valued Patient';
-
-    // 6. Generate QR Code
-    const verificationUrl = `${process.env.BASE_URL || 'http://localhost:3000'}/verify/${verificationCode}`;
-    const qrCodeDataUrl = await QRCode.toDataURL(verificationUrl);
-
-    // 7. Generate PDF
+    // 4. Generate PDF
     const doc = new PDFDocument();
     const filename = `prescription-${prescription._id}.pdf`;
-    
-    // FIX: Ensure path is correct relative to this controller file
-    // CSE471/controllers/ -> ../client/public/prescriptions
     const pdfFolder = path.join(__dirname, '../client/public/prescriptions'); 
     
     if (!fs.existsSync(pdfFolder)) {
-      console.log('📂 Creating folder:', pdfFolder);
       fs.mkdirSync(pdfFolder, { recursive: true });
     }
 
@@ -79,18 +54,16 @@ exports.createPrescription = async (req, res) => {
     const writeStream = fs.createWriteStream(pdfPath);
     doc.pipe(writeStream);
 
-    // --- PDF DESIGN ---
+    // --- PDF Content ---
+    const verificationUrl = `${process.env.BASE_URL || 'http://localhost:3000'}/verify/${verificationCode}`;
+    const qrCodeDataUrl = await QRCode.toDataURL(verificationUrl);
+
     doc.fontSize(20).text(doctor.hospital_id?.name || 'HealthConnect Hospital', { align: 'center' });
     doc.fontSize(10).text(doctor.hospital_id?.location || 'Dhaka, Bangladesh', { align: 'center' });
     doc.moveDown();
     
     doc.fontSize(14).text(`Dr. ${doctor.name}`, { align: 'left' });
-    doc.fontSize(10).text(`${doctor.specialization}`, { align: 'left' });
-    doc.moveDown();
-
-    doc.text(`Patient: ${patientName}`, { align: 'right' });
-    doc.text(`Date: ${new Date().toLocaleDateString()}`, { align: 'right' });
-    
+    doc.text(`Patient: ${patient.name}`, { align: 'right' });
     doc.moveDown();
     doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
     doc.moveDown();
@@ -100,32 +73,50 @@ exports.createPrescription = async (req, res) => {
     
     if (medications && Array.isArray(medications)) {
       medications.forEach((med, i) => {
-        doc.fontSize(12).text(`${i+1}. ${med.drug || ''} ${med.dosage || ''}`);
-        doc.fontSize(10).text(`    ${med.frequency || ''} - ${med.duration || ''}`, { color: 'gray' });
+        doc.fontSize(12).text(`${i+1}. ${med.drug} - ${med.dosage} (${med.frequency})`);
         doc.moveDown(0.5);
       });
     }
 
-    doc.moveDown(1);
-    doc.fontSize(12).text(`Diagnosis: ${diagnosis || 'N/A'}`);
-    doc.fontSize(12).text(`Notes: ${notes || 'N/A'}`);
-
-    // QR Code
-    doc.image(qrCodeDataUrl, 450, 650, { width: 80 });
-    doc.fontSize(8).text('Scan to Verify', 455, 735);
+    doc.moveDown();
+    doc.fontSize(12).text(`Diagnosis: ${diagnosis}`);
+    doc.text(`Notes: ${notes}`);
     
+    doc.image(qrCodeDataUrl, 450, 650, { width: 80 });
     doc.end();
 
+    // 5. On Finish: Save Path AND Send Email
     writeStream.on('finish', async () => {
-      console.log('✅ PDF Generated Successfully:', filename);
-      // Update DB with the public URL path
+      console.log('✅ PDF Generated:', filename);
+      
       prescription.pdfPath = `/prescriptions/${filename}`;
       await prescription.save();
+
+      // --- NEW EMAIL LOGIC ---
+      try {
+        console.log(`📧 Sending email to ${patient.email}...`);
+        
+        await sendEmail({
+          to: patient.email, // Send to patient's actual email
+          subject: `Prescription from Dr. ${doctor.name} - HealthConnect`,
+          text: `Dear ${patient.name},\n\nPlease find attached your digital prescription.\n\nDiagnosis: ${diagnosis}\n\nStay healthy,\nHealthConnect Team`,
+          attachments: [
+            {
+              filename: filename,
+              path: pdfPath // Attach the local file
+            }
+          ]
+        });
+        console.log('✅ Email sent successfully');
+      } catch (emailErr) {
+        console.error('❌ Failed to send email:', emailErr.message);
+        // We don't fail the request if email fails, just log it
+      }
+
       res.status(201).json({ success: true, prescription });
     });
 
     writeStream.on('error', (err) => {
-      console.error('❌ PDF Write Error:', err);
       res.status(500).json({ error: 'Failed to write PDF file' });
     });
 

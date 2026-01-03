@@ -1,16 +1,20 @@
+const axios = require('axios');
 const AmbulanceBooking = require('../models/AmbulanceBooking');
 
-// Mock Routing API function
-const calculateETA = (pickup, ambulanceLocation) => {
-  // In a real app, call Google Maps API here
-  return Math.floor(Math.random() * 20 + 5) + " mins"; 
-};
+// ---------------------------------------------------------
+// REAL ROUTING API (OSRM)
+// documentation: http://project-osrm.org/docs/v5.5.1/api/
+// ---------------------------------------------------------
+const OSRM_BASE_URL = 'http://router.project-osrm.org/route/v1/driving';
+
+// Mock Ambulance Station (e.g., Dhaka Medical College)
+const STATION_COORDS = { lat: 23.7258, lng: 90.3976 };
 
 exports.bookAmbulance = async (req, res) => {
   try {
-    const { type, location } = req.body; // location = { address, lat, lng }
+    const { type, location } = req.body; // location includes { lat, lng } from frontend
     
-    // 1. Create Booking
+    // 1. Create Initial Booking (Pending)
     const booking = await AmbulanceBooking.create({
       userId: req.user.id,
       type,
@@ -18,27 +22,64 @@ exports.bookAmbulance = async (req, res) => {
       status: 'pending'
     });
 
-    // 2. Simulate Dispatch System (Finding nearby ambulance)
-    setTimeout(async () => {
-      // Mock finding an ambulance
-      const eta = calculateETA(location, null);
+    res.status(201).json({ 
+      success: true, 
+      bookingId: booking._id, 
+      message: "Request received. Calculating route..." 
+    });
+
+    // 2. Calculate Real ETA using OSRM API
+    try {
+      console.log("[Ambulance] Calculating route via OSRM...");
       
+      // OSRM requires format: /lng,lat;lng,lat (Note: Longitude first!)
+      const stationStr = `${STATION_COORDS.lng},${STATION_COORDS.lat}`;
+      const patientStr = `${location.lng},${location.lat}`;
+      const url = `${OSRM_BASE_URL}/${stationStr};${patientStr}?overview=false`;
+
+      const routeResponse = await axios.get(url);
+
+      if (routeResponse.data.code !== 'Ok') {
+        throw new Error('Route calculation failed');
+      }
+
+      // Extract duration (OSRM returns seconds)
+      const durationSeconds = routeResponse.data.routes[0].duration;
+      const durationMinutes = Math.ceil(durationSeconds / 60);
+
+      console.log(`[Ambulance] Route found! Drive time: ${durationMinutes} mins`);
+
+      // 3. Update Booking with Real Data
       booking.status = 'assigned';
-      booking.eta = eta;
-      booking.ambulanceId = "AMB-" + Math.floor(Math.random() * 1000);
+      booking.ambulanceId = 'AMB-' + Math.floor(Math.random() * 1000); // We still mock the ID
+      booking.eta = `${durationMinutes} mins`; // This is now REAL
+      
       await booking.save();
 
-      // Emit Socket Event to User
-      const io = req.app.get('io'); // Get IO from app instance
-      // Note: You need a way to map userId to socketId (e.g., from your existing userSockets map if exported, or broadcast to room)
-      // For now, assuming client joins room `user_${req.user.id}`
-      io.emit(`ambulance_update_${req.user.id}`, booking); 
-      
-    }, 5000); // Simulate 5s delay
+      // 4. Notify Frontend
+      const io = req.app.get('io');
+      io.emit(`ambulance_update_${req.user.id}`, booking);
 
-    res.status(201).json({ success: true, bookingId: booking._id, message: "Request received. Finding ambulance..." });
+      // 5. Optional: Simulate Movement Updates
+      setTimeout(async () => {
+        booking.status = 'arrived';
+        booking.eta = '0 mins';
+        await booking.save();
+        io.emit(`ambulance_update_${req.user.id}`, booking);
+      }, durationSeconds * 1000 / 100); // Speed up time for demo (1% of real time)
+
+    } catch (externalError) {
+      console.error("[Ambulance] Routing API Failed:", externalError.message);
+      // Fallback
+      booking.status = 'assigned';
+      booking.eta = '15 mins (Est)';
+      await booking.save();
+      const io = req.app.get('io');
+      io.emit(`ambulance_update_${req.user.id}`, booking);
+    }
 
   } catch (error) {
+    console.error("[Ambulance] Internal Error:", error);
     res.status(500).json({ error: error.message });
   }
 };

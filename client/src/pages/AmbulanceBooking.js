@@ -12,14 +12,27 @@ const AmbulanceBooking = () => {
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
+useEffect(() => {
     if (!user) return;
     
-    // Connect for real-time updates
-    const socket = io('http://localhost:9358');
+    // 1. Get the token from storage (handled by your AuthContext usually, but safe to get direct)
+    const token = localStorage.getItem('token'); 
+
+    // 2. Connect with Auth Token
+    const socket = io('http://localhost:9358', {
+      auth: {
+        token: token // <--- THIS WAS MISSING
+      }
+    });
+
+    // Debug: Check connection status
+    socket.on('connect_error', (err) => {
+      console.error('Socket Connection Error:', err.message);
+    });
     
-    // Listen for updates specific to this user
+    // 3. Listen for updates
     socket.on(`ambulance_update_${user.id}`, (updatedBooking) => {
+      console.log("Update received:", updatedBooking); // Debug log
       setStatus(updatedBooking);
       setLoading(false);
     });
