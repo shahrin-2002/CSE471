@@ -42,10 +42,17 @@ class WebRTCService {
    */
   async initialize() {
     try {
-      // Get local media stream
+      // Get local media stream (iOS-friendly constraints)
       this.localStream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true
+        video: {
+          facingMode: 'user',
+          width: { ideal: 640 },
+          height: { ideal: 480 }
+        },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true
+        }
       });
 
       // Create peer connection
