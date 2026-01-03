@@ -1,34 +1,27 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const sendEmail = async (to, subject, text, html = null) => {
   try {
-    const transporter = nodemailer.createTransport({
-      service: 'gmail', // Built-in service for Gmail
-      auth: {
-        user: process.env.EMAIL_USER, // Load from .env
-        pass: process.env.EMAIL_PASS, // Load from .env
-      },
+    const { data, error } = await resend.emails.send({
+      from: 'HealthConnect <onboarding@resend.dev>', // Free tier uses resend.dev domain
+      to: [to],
+      subject: subject,
+      text: text,
+      html: html || undefined,
     });
 
-    const mailOptions = {
-      from: `"HealthConnect" <${process.env.EMAIL_USER}>`,
-      to,
-      subject,
-      text,
-    };
-
-    // Add HTML if provided
-    if (html) {
-      mailOptions.html = html;
+    if (error) {
+      console.error('[Email Error]', error);
+      throw new Error(error.message);
     }
 
-    const info = await transporter.sendMail(mailOptions);
-
-    console.log(`[Email Sent] To: ${to} | ID: ${info.messageId}`);
-    return info;
+    console.log(`[Email Sent] To: ${to} | ID: ${data.id}`);
+    return data;
   } catch (error) {
     console.error('[Email Error]', error);
-    throw error; // Rethrow so the controller knows it failed
+    throw error;
   }
 };
 
