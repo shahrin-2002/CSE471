@@ -141,8 +141,15 @@ export default function DoctorOnlineAppointments() {
   return (
     <div className="online-appointments-container">
       <div className="page-header">
-        <h1>Online Appointments</h1>
-        <p>View and manage your online video appointments</p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h1>Online Appointments</h1>
+            <p>View and manage your online video appointments</p>
+          </div>
+          <button className="btn-start-call" onClick={loadAppointments} style={{ padding: '10px 20px' }}>
+            🔄 Refresh
+          </button>
+        </div>
       </div>
 
       {msg && <div className="message">{msg}</div>}
