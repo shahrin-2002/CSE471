@@ -30,7 +30,7 @@ const prescriptionRoutes = require('./routes/prescriptionRoutes');
 const ambulanceRoutes = require('./routes/ambulanceRoutes');
 
 // Import models for Socket.io handlers
-const Appointment = require('./models/appointment');
+const Appointment = require('./models/Appointment');
 const Doctor = require('./models/Doctor');
 
 const app = express();
