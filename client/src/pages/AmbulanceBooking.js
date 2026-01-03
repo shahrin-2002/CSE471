@@ -16,7 +16,7 @@ const AmbulanceBooking = () => {
     if (!user) return;
     
     // Connect for real-time updates
-    const socket = io('http://localhost:9358');
+    const socket = io(process.env.REACT_APP_SOCKET_URL || 'http://localhost:9358');
     
     // Listen for updates specific to this user
     socket.on(`ambulance_update_${user.id}`, (updatedBooking) => {
