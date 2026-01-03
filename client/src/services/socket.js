@@ -9,6 +9,7 @@ const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:9358';
 
 class SocketService {
   socket = null;
+  pendingListeners = []; // Queue listeners until socket connects
 
   connect(token) {
     if (this.socket?.connected) {
@@ -23,6 +24,12 @@ class SocketService {
 
     this.socket.on('connect', () => {
       console.log('[Socket] Connected:', this.socket.id);
+      // Apply any queued listeners
+      this.pendingListeners.forEach(({ event, callback }) => {
+        console.log('[Socket] Registering queued listener:', event);
+        this.socket.on(event, callback);
+      });
+      this.pendingListeners = [];
     });
 
     this.socket.on('connect_error', (err) => {
@@ -39,7 +46,22 @@ class SocketService {
     });
   }
 
+  // Helper to register listener with queueing support
+  _on(event, callback) {
+    if (this.socket?.connected) {
+      this.socket.on(event, callback);
+    } else if (this.socket) {
+      // Socket exists but not connected yet - register directly
+      this.socket.on(event, callback);
+    } else {
+      // Socket doesn't exist yet - queue the listener
+      console.log('[Socket] Queueing listener for:', event);
+      this.pendingListeners.push({ event, callback });
+    }
+  }
+
   disconnect() {
+    this.pendingListeners = []; // Clear queued listeners
     if (this.socket) {
       this.socket.disconnect();
       this.socket = null;
@@ -95,47 +117,47 @@ class SocketService {
 
   // Patient receives incoming call
   onIncomingCall(callback) {
-    this.socket?.on('call:incoming', callback);
+    this._on('call:incoming', callback);
   }
 
   // Doctor notified patient is ready
   onPatientReady(callback) {
-    this.socket?.on('call:patient-ready', callback);
+    this._on('call:patient-ready', callback);
   }
 
   // Doctor notified patient declined
   onCallDeclined(callback) {
-    this.socket?.on('call:declined', callback);
+    this._on('call:declined', callback);
   }
 
   // Receive WebRTC offer
   onWebRTCOffer(callback) {
-    this.socket?.on('webrtc:offer', callback);
+    this._on('webrtc:offer', callback);
   }
 
   // Receive WebRTC answer
   onWebRTCAnswer(callback) {
-    this.socket?.on('webrtc:answer', callback);
+    this._on('webrtc:answer', callback);
   }
 
   // Receive ICE candidate
   onIceCandidate(callback) {
-    this.socket?.on('webrtc:ice-candidate', callback);
+    this._on('webrtc:ice-candidate', callback);
   }
 
   // Call ended by other party
   onCallEnded(callback) {
-    this.socket?.on('call:ended', callback);
+    this._on('call:ended', callback);
   }
 
   // Call error
   onCallError(callback) {
-    this.socket?.on('call:error', callback);
+    this._on('call:error', callback);
   }
 
   // Appointment status updated
   onAppointmentUpdated(callback) {
-    this.socket?.on('appointment:updated', callback);
+    this._on('appointment:updated', callback);
   }
 
   // Remove all listeners
@@ -146,6 +168,8 @@ class SocketService {
   // Remove specific listener
   off(event) {
     this.socket?.off(event);
+    // Also remove from pending listeners
+    this.pendingListeners = this.pendingListeners.filter(l => l.event !== event);
   }
 }
 
