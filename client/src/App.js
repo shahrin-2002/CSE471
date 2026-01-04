@@ -6,6 +6,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { LanguageProvider } from './context/LanguageContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
@@ -24,8 +25,12 @@ import DoctorOnlineAppointments from './pages/DoctorOnlineAppointments';
 import ICUBooking from './pages/ICUBooking';
 import GeneralBedBooking from './pages/GeneralBedBooking';
 import CabinBooking from './pages/CabinBooking';
-import DoctorPrescribe from './pages/DoctorPrescribe'; // [NEW]
-import AmbulanceBooking from './pages/AmbulanceBooking'; // [NEW]
+import Reviews from './pages/Reviews';
+import WriteReview from './pages/WriteReview';
+import Favorites from './pages/Favorites';
+import Notifications from './pages/Notifications';
+import LabOrders from './pages/LabOrders';
+import CreateLabOrder from './pages/CreateLabOrder';
 import './App.css';
 
 // Protected Route Component
@@ -62,9 +67,15 @@ const RoleGuard = ({ role, children }) => {
 function AppContent() {
   return (
     <Router>
-      <Routes>
-        {/* Default route */}
-        <Route path="/" element={<Navigate to="/login" />} />
+      {/* Skip to main content link for accessibility */}
+      <a href="#main-content" className="skip-link">
+        Skip to main content
+      </a>
+      
+      <div className="app-container" role="application">
+        <Routes>
+          {/* Default route */}
+          <Route path="/" element={<Navigate to="/login" />} />
 
         {/* Public routes */}
         <Route
@@ -172,20 +183,69 @@ function AppContent() {
             </ProtectedRoute>
           }
         />
-        {/* Doctor Route */}
-        <Route path="/doctor/prescribe" element={
-          <ProtectedRoute>
-            <RoleGuard role="doctor"><DoctorPrescribe /></RoleGuard>
-          </ProtectedRoute>
-        } />
-        {/* Patient Route */}
-        <Route path="/ambulance" element={
-          <ProtectedRoute><AmbulanceBooking /></ProtectedRoute>
-        } />
+
+        {/* Reviews Page */}
+        <Route
+          path="/reviews"
+          element={
+            <ProtectedRoute>
+              <Reviews />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reviews/write"
+          element={
+            <ProtectedRoute>
+              <WriteReview />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Favorites Page */}
+        <Route
+          path="/favorites"
+          element={
+            <ProtectedRoute>
+              <Favorites />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Notifications Page */}
+        <Route
+          path="/notifications"
+          element={
+            <ProtectedRoute>
+              <Notifications />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Lab Orders Page */}
+        <Route
+          path="/lab-orders"
+          element={
+            <ProtectedRoute>
+              <LabOrders />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/lab-orders/create"
+          element={
+            <ProtectedRoute>
+              <RoleGuard role="doctor">
+                <CreateLabOrder />
+              </RoleGuard>
+            </ProtectedRoute>
+          }
+        />
 
         {/* 404 - Catch all */}
         <Route path="*" element={<Navigate to="/login" />} />
-      </Routes>
+        </Routes>
+      </div>
     </Router>
   );
 }
@@ -193,7 +253,9 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <LanguageProvider>
+        <AppContent />
+      </LanguageProvider>
     </AuthProvider>
   );
 }

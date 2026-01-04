@@ -6,21 +6,24 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { doctorAPI, appointmentsAPI } from '../services/api';
+import { useLanguage } from '../context/LanguageContext';
+import { doctorAPI, appointmentsAPI, favoritesAPI } from '../services/api';
 import '../styles/Search.css';
 
 const DoctorSearch = () => {
   const navigate = useNavigate();
   const { isAuthenticated, logout } = useAuth();
+  const { toggleLanguage, language, t } = useLanguage();
 
   const [doctors, setDoctors] = useState([]);
   const [selectedDoctor, setSelectedDoctor] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isFavorited, setIsFavorited] = useState(false);
 
   // Pagination
-  const [total, setTotal] = useState(0);
+  // const [total, setTotal] = useState(0); // Unused variable
   const [offset, setOffset] = useState(0);
   const limit = 10;
 
@@ -41,7 +44,7 @@ const DoctorSearch = () => {
       const response = await doctorAPI.getAll(params);
       const data = response.data.data || response.data.doctors || [];
       setDoctors(data);
-      setTotal(response.data.total || data.length);
+      // setTotal(response.data.total || data.length); // Unused variable
 
       // Auto-select first doctor if available
       if (data.length > 0 && !selectedDoctor) {
@@ -60,8 +63,40 @@ const DoctorSearch = () => {
     try {
       const response = await doctorAPI.getById(id);
       setSelectedDoctor(response.data.data || response.data.doctor || response.data);
+      // Check if doctor is favorited
+      if (isAuthenticated) {
+        checkFavoriteStatus(id);
+      }
     } catch (err) {
       console.error('Fetch doctor details error:', err);
+    }
+  };
+
+  // Check if doctor is favorited
+  const checkFavoriteStatus = async (doctorId) => {
+    try {
+      const response = await favoritesAPI.isFavorited('doctor', doctorId);
+      setIsFavorited(response.data.isFavorited);
+    } catch (err) {
+      console.error('Check favorite status error:', err);
+    }
+  };
+
+  // Toggle favorite
+  const toggleFavorite = async () => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+
+    try {
+      await favoritesAPI.toggle({
+        targetType: 'doctor',
+        targetId: selectedDoctor._id || selectedDoctor.id
+      });
+      setIsFavorited(!isFavorited);
+    } catch (err) {
+      console.error('Toggle favorite error:', err);
     }
   };
 
@@ -134,7 +169,7 @@ const DoctorSearch = () => {
       {/* Header */}
       <div className="search-header">
         <button className="hamburger-menu">☰</button>
-        <h1>HealthConnect</h1>
+        <h1>{t('appName')}</h1>
         <div></div>
       </div>
 
@@ -144,11 +179,11 @@ const DoctorSearch = () => {
           <span>🏥</span>
         </div>
         <ul className="nav-links">
-          <li><Link to="/hospitals">Hospitals</Link></li>
-          <li><Link to="/doctors" className="active">Doctors</Link></li>
+          <li><Link to="/hospitals">{t('hospitals')}</Link></li>
+          <li><Link to="/doctors" className="active">{t('doctors')}</Link></li>
           <li className="nav-dropdown">
             <span className="nav-dropdown-toggle">
-              Booking <span className="dropdown-arrow">▼</span>
+              {t('booking')} <span className="dropdown-arrow">▼</span>
             </span>
             <ul className="nav-dropdown-menu">
               <li><Link to="/booking/icu">ICU</Link></li>
@@ -156,27 +191,30 @@ const DoctorSearch = () => {
               <li><Link to="/booking/cabin">Cabin</Link></li>
             </ul>
           </li>
-          <li><Link to="/appointments">Appointments</Link></li>
-          <li><Link to="/dashboard">Dashboard</Link></li>
+          <li><Link to="/appointments">{t('appointments')}</Link></li>
+          <li><Link to="/dashboard">{t('dashboard')}</Link></li>
         </ul>
         <div className="nav-buttons">
           {isAuthenticated ? (
             <>
               <Link to="/dashboard">
-                <button className="btn-outline">Dashboard</button>
+                <button className="btn-outline">{t('dashboard')}</button>
               </Link>
-              <button className="btn-dark" onClick={handleLogout}>Logout</button>
+              <button className="btn-dark" onClick={handleLogout}>{t('logout')}</button>
             </>
           ) : (
             <>
               <Link to="/login">
-                <button className="btn-outline">Sign in</button>
+                <button className="btn-outline">{t('signIn')}</button>
               </Link>
               <Link to="/register">
-                <button className="btn-dark">Register</button>
+                <button className="btn-dark">{t('register')}</button>
               </Link>
             </>
           )}
+          <button className="btn-outline" onClick={toggleLanguage}>
+            {language === 'en' ? 'বাংলা' : 'English'}
+          </button>
         </div>
       </nav>
 
@@ -186,7 +224,7 @@ const DoctorSearch = () => {
           <span className="search-icon">🔍</span>
           <input
             type="text"
-            placeholder="Find a Doctor"
+            placeholder={t('findDoctor')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="search-input"
@@ -200,7 +238,7 @@ const DoctorSearch = () => {
         {error && <div className="error-message">{error}</div>}
 
         {loading ? (
-          <div className="loading">Loading doctors...</div>
+          <div className="loading">{t('loading')}</div>
         ) : (
           <>
             {/* Doctor List (Left Side) */}
@@ -224,7 +262,7 @@ const DoctorSearch = () => {
                 </div>
               ))}
               {doctors.length === 0 && !loading && (
-                <div className="no-results">No doctors found</div>
+                <div className="no-results">{t('noDoctorsFound')}</div>
               )}
             </div>
 
@@ -233,7 +271,13 @@ const DoctorSearch = () => {
               <div className="search-details">
                 <div className="details-card">
                   <div className="details-image">
-                    <button className="favorite-btn">♡</button>
+                    <button
+                      className={`favorite-btn ${isFavorited ? 'favorited' : ''}`}
+                      onClick={toggleFavorite}
+                      title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+                    >
+                      {isFavorited ? '♥' : '♡'}
+                    </button>
                     <div className="image-placeholder doctor">
                       <span>👨‍⚕️</span>
                     </div>
@@ -244,7 +288,7 @@ const DoctorSearch = () => {
                     <p className="doctor-specialization">{selectedDoctor.specialization}</p>
 
                     <div className="price-badge">
-                      <span className="badge-label">Visiting Fee</span>
+                      <span className="badge-label">{t('visitingFee')}</span>
                       <div className="price-value">
                         <span className="currency">taka</span>
                         <span className="amount">{selectedDoctor.consultation_fee || 500}</span>
@@ -259,20 +303,20 @@ const DoctorSearch = () => {
                     <div className="booking-form">
                       {/* Appointment Type Selection */}
                       <div className="form-field full-width" style={{ marginBottom: '15px' }}>
-                        <label>Appointment Type</label>
+                        <label>{t('appointmentType')}</label>
                         <select
                           className="form-select"
                           value={appointmentType}
                           onChange={(e) => setAppointmentType(e.target.value)}
                           style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ddd', width: '100%' }}
                         >
-                          <option value="in-person">In-Person Visit</option>
-                          <option value="online">Online Video Call</option>
+                          <option value="in-person">{t('inPersonVisit')}</option>
+                          <option value="online">{t('onlineVideoCall')}</option>
                         </select>
                       </div>
 
                       <div className="form-field full-width">
-                        <label>Select Date</label>
+                        <label>{t('selectDate')}</label>
                         <input
                           type="date"
                           className="form-select"
@@ -286,12 +330,12 @@ const DoctorSearch = () => {
                       {selectedDate && (
                         <div className="slots-container" style={{ marginTop: '15px' }}>
                           <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#2B2B2B' }}>
-                            Available Time Slots
+                            {t('availableTimeSlots')}
                           </label>
                           
                           {loadingSlots ? (
                             <div style={{ color: '#666', fontSize: '0.9rem', padding: '10px' }}>
-                              Checking doctor's schedule...
+                              {t('checkingSchedule')}
                             </div>
                           ) : availableSlots.length > 0 ? (
                             <div style={{ 
@@ -321,7 +365,7 @@ const DoctorSearch = () => {
                             </div>
                           ) : (
                             <div style={{ color: '#dc3545', fontSize: '0.9rem', marginTop: '5px' }}>
-                              No slots available for this date.
+                              {t('noSlotsAvailable')}
                             </div>
                           )}
                         </div>
@@ -330,7 +374,7 @@ const DoctorSearch = () => {
                       {/* Only show 'Book Appointment' if a slot logic was fully implemented (Member-3) */}
                       {!selectedDate && (
                         <button className="btn-booking" disabled style={{ opacity: 0.5, marginTop: '15px' }}>
-                          Select Date First
+                          {t('selectDateFirst')}
                         </button>
                       )}
                     </div>

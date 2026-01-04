@@ -6,6 +6,7 @@ const router = express.Router();
 
 router.post('/toggle', verifyToken, favoriteController.toggleFavorite);
 router.get('/mine', verifyToken, favoriteController.listFavorites);
+router.get('/check/:targetType/:targetId', verifyToken, favoriteController.checkFavorite);
 
 module.exports = router;
 

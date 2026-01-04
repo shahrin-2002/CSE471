@@ -1,4 +1,6 @@
 const Favorite = require('../models/Favorite');
+const Doctor = require('../models/Doctor');
+const Hospital = require('../models/Hospital');
 
 // POST /api/favorites/toggle
 exports.toggleFavorite = async (req, res) => {
@@ -32,10 +34,43 @@ exports.listFavorites = async (req, res) => {
     const query = { userId };
     if (targetType) query.targetType = targetType;
 
-    const favorites = await Favorite.find(query).populate('targetId', 'name');
-    res.json({ favorites });
+    const favorites = await Favorite.find(query).lean();
+    
+    // Manually populate based on targetType
+    const populatedFavorites = await Promise.all(
+      favorites.map(async (favorite) => {
+        let targetData = null;
+        
+        if (favorite.targetType === 'doctor') {
+          targetData = await Doctor.findById(favorite.targetId).lean();
+        } else if (favorite.targetType === 'hospital') {
+          targetData = await Hospital.findById(favorite.targetId).lean();
+        }
+        
+        return {
+          ...favorite,
+          targetId: targetData
+        };
+      })
+    );
+    
+    res.json({ favorites: populatedFavorites });
   } catch (err) {
+    console.error('Error loading favorites:', err);
     res.status(500).json({ error: err.message || 'Failed to load favorites' });
+  }
+};
+
+// GET /api/favorites/check/:targetType/:targetId
+exports.checkFavorite = async (req, res) => {
+  try {
+    const { targetType, targetId } = req.params;
+    const userId = req.user.id;
+
+    const existing = await Favorite.findOne({ userId, targetType, targetId });
+    res.json({ isFavorited: !!existing });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Failed to check favorite status' });
   }
 };
 

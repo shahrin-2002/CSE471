@@ -6,11 +6,13 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import '../styles/Auth.css';
 
 const Register = () => {
   const navigate = useNavigate();
   const { signup } = useAuth();
+  const { t, toggleLanguage, language } = useLanguage();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -94,7 +96,7 @@ const Register = () => {
       {/* Header */}
       <div className="auth-header">
         <button className="hamburger-menu">☰</button>
-        <h1>HealthConnect</h1>
+        <h1>{t('appName')}</h1>
         <div></div>
       </div>
 
@@ -104,35 +106,36 @@ const Register = () => {
           <span>🏥</span>
         </div>
         <ul className="nav-links">
-          <li><Link to="/hospitals">Hospitals</Link></li>
-          <li><Link to="/ambulance">Ambulance</Link></li>
-          <li><Link to="/doctors">Doctors</Link></li>
-          <li><Link to="/locations">Locations</Link></li>
-          <li><Link to="/booking">Booking</Link></li>
-          <li><Link to="/contact">Contact</Link></li>
-          <li><Link to="/link">Link</Link></li>
+          <li><Link to="/hospitals">{t('hospitals')}</Link></li>
+          <li><Link to="/ambulance">{t('ambulance')}</Link></li>
+          <li><Link to="/doctors">{t('doctors')}</Link></li>
+          <li><Link to="/locations">{t('locations')}</Link></li>
+          <li><Link to="/booking">{t('booking')}</Link></li>
+          <li><Link to="/contact">{t('contact')}</Link></li>
+          <li><Link to="/link">{t('link')}</Link></li>
         </ul>
         <div className="nav-buttons">
           <Link to="/login">
-            <button className="btn-outline">Sign in</button>
+            <button className="btn-outline">{t('signIn')}</button>
           </Link>
           <Link to="/register">
-            <button className="btn-dark">Register</button>
+            <button className="btn-dark">{t('register')}</button>
           </Link>
+          <button onClick={toggleLanguage} style={{ marginLeft: '10px' }} className="btn-outline">{language === 'en' ? 'বাংলা' : 'English'}</button>
         </div>
       </nav>
 
       {/* Main Content */}
       <div className="auth-content">
         <div className="auth-card">
-          <h2>Registration</h2>
-          <p className="subtitle">Create your Account</p>
+          <h2>{t('registration')}</h2>
+          <p className="subtitle">{t('createAccount')}</p>
 
           {error && <div className="error-message">{error}</div>}
 
           <form onSubmit={handleSubmit}>
             <div className="form-group">
-              <label htmlFor="name">Name</label>
+              <label htmlFor="name">{t('name')}</label>
               <input
                 type="text"
                 id="name"
@@ -145,7 +148,7 @@ const Register = () => {
             </div>
 
             <div className="form-group">
-              <label htmlFor="email">Email</label>
+              <label htmlFor="email">{t('email')}</label>
               <input
                 type="email"
                 id="email"
@@ -158,22 +161,22 @@ const Register = () => {
             </div>
 
             <div className="form-group">
-              <label htmlFor="gender">Gender</label>
+              <label htmlFor="gender">{t('gender')}</label>
               <select
                 id="gender"
                 name="gender"
                 value={formData.gender}
                 onChange={handleChange}
               >
-                <option value="">Select Gender</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
+                <option value="">{t('selectGender') || 'Select Gender'}</option>
+                <option value="male">{t('male') || 'Male'}</option>
+                <option value="female">{t('female') || 'Female'}</option>
+                <option value="other">{t('other') || 'Other'}</option>
               </select>
             </div>
 
             <div className="form-group">
-              <label htmlFor="date_of_birth">Date of Birth</label>
+              <label htmlFor="date_of_birth">{t('dateOfBirth')}</label>
               <input
                 type="date"
                 id="date_of_birth"
@@ -185,7 +188,7 @@ const Register = () => {
             </div>
 
             <div className="form-group">
-              <label htmlFor="role">Register as</label>
+              <label htmlFor="role">{t('registerAs')}</label>
               <select
                 id="role"
                 name="role"
@@ -193,14 +196,14 @@ const Register = () => {
                 onChange={handleChange}
                 required
               >
-                <option value="patient">Patient</option>
-                <option value="doctor">Doctor</option>
-                <option value="admin">Admin</option>
+                <option value="patient">{t('patient')}</option>
+                <option value="doctor">{t('doctor')}</option>
+                <option value="admin">{t('admin')}</option>
               </select>
             </div>
 
             <div className="form-group">
-              <label htmlFor="password">Password</label>
+              <label htmlFor="password">{t('password')}</label>
               <input
                 type="password"
                 id="password"
@@ -213,7 +216,7 @@ const Register = () => {
             </div>
 
             <div className="form-group">
-              <label htmlFor="confirmPassword">Confirm Password</label>
+              <label htmlFor="confirmPassword">{t('confirmPassword') || 'Confirm Password'}</label>
               <input
                 type="password"
                 id="confirmPassword"
@@ -234,7 +237,7 @@ const Register = () => {
                 onChange={handleChange}
               />
               <label htmlFor="acceptTerms">
-                I accept the terms <Link to="/terms">Read our T&Cs</Link>
+                {t('acceptTerms')} <Link to="/terms">{t('readTerms') || 'Read our T&Cs'}</Link>
               </label>
             </div>
 
@@ -243,12 +246,12 @@ const Register = () => {
               className="btn-submit btn-submit-teal"
               disabled={loading}
             >
-              {loading ? 'Creating Account...' : 'Create an Account'}
+              {loading ? (t('creatingAccount') || 'Creating Account...') : (t('createAccount') || 'Create an Account')}
             </button>
           </form>
 
           <div className="auth-link-bottom">
-            Already have an account? <Link to="/login">Sign in</Link>
+            {t('haveAccount')} <Link to="/login">{t('signIn')}</Link>
           </div>
         </div>
       </div>

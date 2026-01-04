@@ -4,7 +4,6 @@
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { authAPI } from '../services/api';
-import socketService from '../services/socket';
 
 const AuthContext = createContext(null);
 
@@ -33,66 +32,62 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  // Connect socket when user is authenticated
-  useEffect(() => {
-    if (token) {
-      socketService.connect(token);
-      console.log('[Auth] Socket connected for user');
-    } else {
-      socketService.disconnect();
-    }
-
-    return () => {
-      // Cleanup on unmount (but don't disconnect on re-renders)
-    };
-  }, [token]);
-
   // Login function
 // Replace the existing login function with this:
 const login = async (email, password) => {
     try {
       const response = await authAPI.login({ email, password });
-
-      // Helpful debug log for developers
-      console.log('[Auth] login response', response?.status, response?.data);
-
-      // Normalized handling depending on backend shape
-      const data = response?.data || {};
-
-      // If backend asks for OTP
-      if (data.requiresOtp) {
-        return {
-          success: false,
-          requiresOtp: true,
-          email: data.email,
+      
+      // Check if the backend is asking for an OTP
+      if (response.data.requiresOtp) {
+        return { 
+          success: false, 
+          requiresOtp: true, 
+          email: response.data.email 
         };
       }
 
-      // If backend returned token & user (standard login)
-      if (data.token) {
-        const newToken = data.token;
-        const newUser = data.user || {};
+      // Standard Login (Fallback or if 2FA is disabled)
+      // Note: Fixed typo from 'nVToken' to 'token'
+      const { token: newToken, user: newUser } = response.data;
 
-        if (newToken) {
-          localStorage.setItem('token', newToken);
-          localStorage.setItem('user', JSON.stringify(newUser));
+      localStorage.setItem('token', newToken);
+      localStorage.setItem('user', JSON.stringify(newUser));
 
-          setToken(newToken);
-          setUser(newUser);
+      setToken(newToken);
+      setUser(newUser);
 
-          return { success: true, user: newUser };
+      // ✅ Return user so Login.js can redirect based on role
+      return { success: true, user: newUser };
+    } catch (error) {
+      console.error('Login error details:', error);
+      
+      // Handle network/timeout errors
+      if (!error.response) {
+        if (error.code === 'ECONNABORTED') {
+          return {
+            success: false,
+            error: 'Request timed out. Please check your internet connection and try again.',
+          };
         }
+        if (error.message === 'Network Error') {
+          return {
+            success: false,
+            error: 'Cannot connect to server. Please make sure the server is running on port 9358.',
+          };
+        }
+        return {
+          success: false,
+          error: 'Network error. Please check your connection and try again.',
+        };
       }
-
-      // Unexpected but non-error response
+      
+      // Handle server errors with detailed messages
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Login failed';
       return {
         success: false,
-        error: data.error || data.message || 'Unexpected response from server',
+        error: errorMessage,
       };
-    } catch (error) {
-      console.error('[Auth] login error', error.response?.data || error.message);
-      const errMsg = error.response?.data?.message || error.response?.data?.error || error.message || 'Login failed';
-      return { success: false, error: errMsg };
     }
   };
 
@@ -133,7 +128,6 @@ const verifyOtp = async (email, otp) => {
 
   // Logout function
   const logout = () => {
-    socketService.disconnect();
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setToken(null);
@@ -160,16 +154,15 @@ const verifyOtp = async (email, otp) => {
 
 const value = {
     user,
-    setUser,
     token,
     loading,
     login,
-    verifyOtp, 
+    verifyOtp,
     signup,
     logout,
     getProfile,
     isAuthenticated: !!token,
-  // expose setUser for profile updates (already exported above)
+    setUser, // expose setUser for profile updates
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

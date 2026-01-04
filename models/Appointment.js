@@ -20,4 +20,5 @@ const appointmentSchema = new mongoose.Schema({
   promotedAt: { type: Date }
 }, { timestamps: true });
 
-module.exports = mongoose.models.Appointment || mongoose.model('Appointment', appointmentSchema); 
+// Prevent model overwrite error - check if model already exists
+module.exports = mongoose.models.Appointment || mongoose.model('Appointment', appointmentSchema);

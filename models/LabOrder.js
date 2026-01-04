@@ -39,6 +39,6 @@ const labOrderSchema = new mongoose.Schema(
 
 labOrderSchema.index({ patientId: 1, doctorId: 1, status: 1 });
 
-module.exports = mongoose.model('LabOrder', labOrderSchema);
+module.exports = mongoose.models.LabOrder || mongoose.model('LabOrder', labOrderSchema);
 
 

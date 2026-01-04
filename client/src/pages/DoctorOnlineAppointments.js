@@ -1,26 +1,18 @@
 /**
  * Doctor Online Appointments Page
- * Shows list of online appointments with video call functionality
+ * Shows list of online appointments
  */
 
 import { useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom'; // 1. Added Hook
 import { useAuth } from '../context/AuthContext';
 import { appointmentsAPI } from '../services/api';
-import socketService from '../services/socket';
-import VideoCallModal from '../components/VideoCallModal';
 import './DoctorOnlineAppointments.css';
 
 export default function DoctorOnlineAppointments() {
   const { user } = useAuth();
-  const navigate = useNavigate(); // 2. Initialize Hook
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState('');
-
-  // Video call state
-  const [callStates, setCallStates] = useState({}); // { appointmentId: 'idle' | 'waiting' | 'ready' }
-  const [activeCall, setActiveCall] = useState(null); // { appointmentId, patientId, patientName }
 
   // Load online appointments
   const loadAppointments = useCallback(async () => {
@@ -29,118 +21,30 @@ export default function DoctorOnlineAppointments() {
       const { data } = await appointmentsAPI.doctor(user?.doctorId);
       const onlineAppts = (data.appointments || []).filter(a => a.type === 'online');
       setAppointments(onlineAppts);
-
-      // Initialize call states for all appointments
-      const states = {};
-      onlineAppts.forEach(a => {
-        states[a._id] = callStates[a._id] || 'idle';
-      });
-      setCallStates(states);
     } catch (err) {
       setMsg(err.response?.data?.message || 'Failed to load appointments');
     } finally {
       setLoading(false);
     }
-  }, [user, callStates]);
+  }, [user]);
 
-  // Set up socket listeners on mount
-  useEffect(() => {
-    // Listen for patient ready
-    socketService.onPatientReady(({ appointmentId }) => {
-      setCallStates(prev => ({ ...prev, [appointmentId]: 'ready' }));
-      setMsg('Patient is ready for the call!');
-    });
-
-    // Listen for patient decline
-    socketService.onCallDeclined(({ appointmentId }) => {
-      setCallStates(prev => ({ ...prev, [appointmentId]: 'idle' }));
-      setMsg('Patient declined the call');
-    });
-
-    // Listen for call errors
-    socketService.onCallError(({ message }) => {
-      setMsg(message);
-      // Reset all waiting states to idle
-      setCallStates(prev => {
-        const updated = { ...prev };
-        Object.keys(updated).forEach(key => {
-          if (updated[key] === 'waiting') updated[key] = 'idle';
-        });
-        return updated;
-      });
-    });
-
-    return () => {
-      socketService.off('call:patient-ready');
-      socketService.off('call:declined');
-      socketService.off('call:error');
-    };
-  }, []);
-
-  // Load appointments on mount
   useEffect(() => {
     if (user?.doctorId) {
       loadAppointments();
     } else {
       setLoading(false);
     }
-  }, [user?.doctorId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Initiate call to patient
-  const initiateCall = (appointment) => {
-    const patientId = appointment.patientId?._id || appointment.patientId;
-    socketService.initiateCall(appointment._id, patientId);
-    setCallStates(prev => ({ ...prev, [appointment._id]: 'waiting' }));
-    setMsg('Calling patient... waiting for response');
-  };
-
-  // Cancel waiting for patient
-  const cancelWaiting = (appointmentId) => {
-    setCallStates(prev => ({ ...prev, [appointmentId]: 'idle' }));
-    setMsg('');
-  };
-
-  // Start video call (when patient is ready)
-  const startVideoCall = (appointment) => {
-    setActiveCall({
-      appointmentId: appointment._id,
-      patientId: appointment.patientId?._id || appointment.patientId,
-      patientName: appointment.patientId?.name || 'Patient'
-    });
-  };
-
-  // Close video call
-  const closeVideoCall = () => {
-    if (activeCall) {
-      setCallStates(prev => ({ ...prev, [activeCall.appointmentId]: 'idle' }));
-    }
-    setActiveCall(null);
-    setMsg('');
-  };
+  }, [user, loadAppointments]);
 
   // Mark appointment as completed
-  const markCompleted = async (appointment) => {
+  const markCompleted = async (appointmentId) => {
     try {
-      await appointmentsAPI.complete(appointment._id);
-      // Notify patient in real-time
-      const patientId = appointment.patientId?._id || appointment.patientId;
-      socketService.notifyAppointmentUpdate(appointment._id, patientId, 'completed');
+      await appointmentsAPI.complete(appointmentId);
       setMsg('Appointment marked as completed');
       loadAppointments();
     } catch (err) {
       setMsg(err.response?.data?.message || 'Failed to update');
     }
-  };
-
-  // 3. New Function to handle navigation to prescription page
-  const handlePrescribe = (appointment) => {
-    navigate('/doctor/prescribe', { 
-      state: { 
-        patientId: appointment.patientId?._id,
-        patientName: appointment.patientId?.name, 
-        appointmentId: appointment._id 
-      } 
-    });
   };
 
   if (loading) {
@@ -154,15 +58,8 @@ export default function DoctorOnlineAppointments() {
   return (
     <div className="online-appointments-container">
       <div className="page-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h1>Online Appointments</h1>
-            <p>View and manage your online video appointments</p>
-          </div>
-          <button className="btn-start-call" onClick={loadAppointments} style={{ padding: '10px 20px' }}>
-            🔄 Refresh
-          </button>
-        </div>
+        <h1>Online Appointments</h1>
+        <p>View your scheduled online appointments</p>
       </div>
 
       {msg && <div className="message">{msg}</div>}
@@ -200,85 +97,19 @@ export default function DoctorOnlineAppointments() {
                 </div>
               </div>
 
-              {/* Video Call Actions */}
               {appt.status !== 'completed' && appt.status !== 'cancelled' && (
                 <div className="appointment-actions">
-                  {/* Idle state - Show Start Call button */}
-                  {(!callStates[appt._id] || callStates[appt._id] === 'idle') && (
-                    <button
-                      className="btn-start-call"
-                      onClick={() => initiateCall(appt)}
-                    >
-                      Start Call
-                    </button>
-                  )}
-
-                  {/* Waiting state - Show waiting indicator */}
-                  {callStates[appt._id] === 'waiting' && (
-                    <div className="waiting-state">
-                      <div className="waiting-indicator">
-                        <span className="dot"></span>
-                        <span className="dot"></span>
-                        <span className="dot"></span>
-                      </div>
-                      <span>Waiting for patient...</span>
-                      <button
-                        className="btn-cancel-waiting"
-                        onClick={() => cancelWaiting(appt._id)}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Ready state - Show Join Call button */}
-                  {callStates[appt._id] === 'ready' && (
-                    <button
-                      className="btn-join-call"
-                      onClick={() => startVideoCall(appt)}
-                    >
-                      Patient Ready - Join Call
-                    </button>
-                  )}
-
-                  {/* Mark as completed button */}
                   <button
                     className="btn-complete"
-                    onClick={() => markCompleted(appt)}
+                    onClick={() => markCompleted(appt._id)}
                   >
                     Mark as Completed
                   </button>
                 </div>
               )}
-
-              {/* 4. Show Prescribe Button ONLY when completed */}
-              {appt.status === 'completed' && (
-                <div className="appointment-actions">
-                  <button
-                    className="btn-start-call"
-                    style={{ backgroundColor: '#28a745', width: '100%' }}
-                    onClick={() => handlePrescribe(appt)}
-                  >
-                    Write Prescription
-                  </button>
-                </div>
-              )}
-
             </div>
           ))}
         </div>
-      )}
-
-      {/* Video Call Modal */}
-      {activeCall && (
-        <VideoCallModal
-          isOpen={!!activeCall}
-          onClose={closeVideoCall}
-          appointmentId={activeCall.appointmentId}
-          remoteUserId={activeCall.patientId}
-          remoteUserName={activeCall.patientName}
-          isInitiator={true}
-        />
       )}
     </div>
   );

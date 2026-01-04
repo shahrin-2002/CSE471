@@ -6,12 +6,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { icuAPI } from '../services/api';
 import '../styles/ICU.css';
 
 const ICUBooking = () => {
   const navigate = useNavigate();
   const { isAuthenticated, user, logout } = useAuth();
+  const { t, toggleLanguage, language } = useLanguage();
 
   // State
   const [hospitalsData, setHospitalsData] = useState({});
@@ -208,7 +210,7 @@ const ICUBooking = () => {
       {/* Header */}
       <div className="icu-header">
         <button className="hamburger-menu">☰</button>
-        <h1>HealthConnect</h1>
+        <h1>{t('appName')}</h1>
         <div></div>
       </div>
 
@@ -218,37 +220,39 @@ const ICUBooking = () => {
           <span>🏥</span>
         </div>
         <ul className="nav-links">
-          <li><Link to="/hospitals">Hospitals</Link></li>
-          <li><Link to="/doctors">Doctors</Link></li>
+          <li><Link to="/hospitals">{t('hospitals')}</Link></li>
+          <li><Link to="/doctors">{t('doctors')}</Link></li>
           <li className="nav-dropdown">
             <span className="nav-dropdown-toggle active">
-              Booking <span className="dropdown-arrow">▼</span>
+              {t('booking')} <span className="dropdown-arrow">▼</span>
             </span>
             <ul className="nav-dropdown-menu">
-              <li><Link to="/booking/icu" className="active">ICU</Link></li>
-              <li><Link to="/booking/general-bed">General Bed</Link></li>
-              <li><Link to="/booking/cabin">Cabin</Link></li>
+              <li><Link to="/booking/icu" className="active">{t('icu')}</Link></li>
+              <li><Link to="/booking/general-bed">{t('generalBed')}</Link></li>
+              <li><Link to="/booking/cabin">{t('cabin')}</Link></li>
             </ul>
           </li>
-          <li><Link to="/appointments">Appointments</Link></li>
-          <li><Link to="/dashboard">Dashboard</Link></li>
+          <li><Link to="/appointments">{t('appointments')}</Link></li>
+          <li><Link to="/dashboard">{t('dashboard')}</Link></li>
         </ul>
         <div className="nav-buttons">
           {isAuthenticated ? (
             <>
               <Link to="/dashboard">
-                <button className="btn-outline">Dashboard</button>
+                <button className="btn-outline">{t('dashboard')}</button>
               </Link>
-              <button className="btn-dark" onClick={handleLogout}>Logout</button>
+              <button className="btn-dark" onClick={handleLogout}>{t('logout')}</button>
+              <button className="btn-outline" onClick={toggleLanguage} style={{ marginLeft: '10px' }}>{language === 'en' ? 'বাংলা' : 'English'}</button>
             </>
           ) : (
             <>
               <Link to="/login">
-                <button className="btn-outline">Sign in</button>
+                <button className="btn-outline">{t('signIn')}</button>
               </Link>
               <Link to="/register">
-                <button className="btn-dark">Register</button>
+                <button className="btn-dark">{t('register')}</button>
               </Link>
+              <button className="btn-outline" onClick={toggleLanguage} style={{ marginLeft: '10px' }}>{language === 'en' ? 'বাংলা' : 'English'}</button>
             </>
           )}
         </div>
@@ -256,21 +260,21 @@ const ICUBooking = () => {
 
       {/* Page Title */}
       <div className="icu-title-section">
-        <h2>ICU Bed Booking</h2>
-        <p>Find and book ICU beds across hospitals in Dhaka</p>
+        <h2>{t('icuBedBooking')}</h2>
+        <p>{t('findBookICUBeds')}</p>
       </div>
 
       {/* Search and Filter Section */}
       <div className="icu-search-section">
         <div className="icu-filters">
           <div className="filter-group">
-            <label>Filter by Location</label>
+            <label>{t('filterByLocation')}</label>
             <select
               value={selectedLocation}
               onChange={handleLocationChange}
               className="filter-select"
             >
-              <option value="">All Locations</option>
+              <option value="">{t('allLocations')}</option>
               {locations.map((loc) => (
                 <option key={loc} value={loc}>{loc}</option>
               ))}
@@ -278,16 +282,16 @@ const ICUBooking = () => {
           </div>
 
           <div className="filter-group">
-            <label>Search Hospital</label>
+            <label>{t('searchHospital')}</label>
             <form onSubmit={handleSearch} className="search-form">
               <input
                 type="text"
-                placeholder="Enter hospital name..."
+                placeholder={t('enterHospitalName')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="search-input"
               />
-              <button type="submit" className="btn-search">Search</button>
+              <button type="submit" className="btn-search">{t('search')}</button>
             </form>
           </div>
         </div>
@@ -316,7 +320,7 @@ const ICUBooking = () => {
         ) : Object.keys(hospitalsData).length === 0 ? (
           <div className="no-results">
             <span>🏥</span>
-            <p>No ICU data available</p>
+            <p>{t('noICUDataAvailable')}</p>
           </div>
         ) : (
           Object.entries(hospitalsData).map(([location, hospitals]) => (
@@ -339,21 +343,21 @@ const ICUBooking = () => {
                     <div className="icu-stats">
                       <div className="stat available">
                         <span className="stat-number">{hospital.available_icu}</span>
-                        <span className="stat-label">Available</span>
+                        <span className="stat-label">{t('available')}</span>
                       </div>
                       <div className="stat booked">
                         <span className="stat-number">{hospital.booked_icu}</span>
-                        <span className="stat-label">Booked</span>
+                        <span className="stat-label">{t('booked')}</span>
                       </div>
                       <div className="stat total">
                         <span className="stat-number">{hospital.total_icu}</span>
-                        <span className="stat-label">Total</span>
+                        <span className="stat-label">{t('total')}</span>
                       </div>
                     </div>
 
                     <div className="hospital-card-footer">
                       <div className="price-info">
-                        <span className="price-label">Price/Day:</span>
+                        <span className="price-label">{t('pricePerDay')}:</span>
                         <span className="price-value">৳{hospital.price_per_day}</span>
                       </div>
 
@@ -362,14 +366,14 @@ const ICUBooking = () => {
                           className="btn-book"
                           onClick={() => openBookingModal(hospital)}
                         >
-                          Book ICU
+                          {t('bookICU')}
                         </button>
                       ) : (
                         <button
                           className="btn-waitlist"
                           onClick={() => openWaitlistModal(hospital)}
                         >
-                          Join Waitlist
+                          {t('joinWaitlist')}
                         </button>
                       )}
                     </div>
@@ -386,12 +390,12 @@ const ICUBooking = () => {
         <div className="modal-overlay" onClick={() => setShowBookingModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Book ICU at {selectedHospital.hospital_name}</h3>
+              <h3>{t('bookICUAt')} {selectedHospital.hospital_name}</h3>
               <button className="modal-close" onClick={() => setShowBookingModal(false)}>×</button>
             </div>
             <form onSubmit={handleBookingSubmit}>
               <div className="form-group">
-                <label>Check-in Date *</label>
+                <label>{t('checkInDate')} *</label>
                 <input
                   type="date"
                   value={bookingForm.check_in_date}
@@ -401,7 +405,7 @@ const ICUBooking = () => {
                 />
               </div>
               <div className="form-group">
-                <label>Patient Name *</label>
+                <label>{t('patientName')} *</label>
                 <input
                   type="text"
                   value={bookingForm.patient_name}
@@ -411,7 +415,7 @@ const ICUBooking = () => {
                 />
               </div>
               <div className="form-group">
-                <label>Phone Number *</label>
+                <label>{t('phoneNumber')} *</label>
                 <input
                   type="tel"
                   value={bookingForm.patient_phone}
@@ -421,7 +425,7 @@ const ICUBooking = () => {
                 />
               </div>
               <div className="form-group">
-                <label>Notes (Optional)</label>
+                <label>{t('notes')} (Optional)</label>
                 <textarea
                   value={bookingForm.notes}
                   onChange={(e) => setBookingForm({...bookingForm, notes: e.target.value})}
@@ -431,10 +435,10 @@ const ICUBooking = () => {
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn-cancel" onClick={() => setShowBookingModal(false)}>
-                  Cancel
+                  {t('cancel')}
                 </button>
                 <button type="submit" className="btn-confirm" disabled={submitLoading}>
-                  {submitLoading ? 'Booking...' : 'Confirm Booking'}
+                  {submitLoading ? t('booking') : t('confirmBooking')}
                 </button>
               </div>
             </form>
@@ -447,15 +451,15 @@ const ICUBooking = () => {
         <div className="modal-overlay" onClick={() => setShowWaitlistModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Join Waitlist at {selectedHospital.hospital_name}</h3>
+              <h3>{t('joinWaitlistAt')} {selectedHospital.hospital_name}</h3>
               <button className="modal-close" onClick={() => setShowWaitlistModal(false)}>×</button>
             </div>
             <div className="waitlist-info">
-              <p>No ICU beds are currently available. Join the waitlist and we'll notify you when a bed becomes available.</p>
+              <p>{t('noICUBedsAvailable')}</p>
             </div>
             <form onSubmit={handleWaitlistSubmit}>
               <div className="form-group">
-                <label>Email Address *</label>
+                <label>{t('emailAddress')} *</label>
                 <input
                   type="email"
                   value={waitlistForm.email}
@@ -465,7 +469,7 @@ const ICUBooking = () => {
                 />
               </div>
               <div className="form-group">
-                <label>Name (Optional)</label>
+                <label>{t('name')} (Optional)</label>
                 <input
                   type="text"
                   value={waitlistForm.patient_name}
@@ -474,7 +478,7 @@ const ICUBooking = () => {
                 />
               </div>
               <div className="form-group">
-                <label>Phone (Optional)</label>
+                <label>{t('phone')} (Optional)</label>
                 <input
                   type="tel"
                   value={waitlistForm.phone}
@@ -501,26 +505,26 @@ const ICUBooking = () => {
           <div className="modal-content success-popup" onClick={(e) => e.stopPropagation()}>
             <div className="success-popup-header">
               <div className="success-icon">✓</div>
-              <h2>Booking Confirmed!</h2>
+              <h2>{t('bookingConfirmed')}</h2>
             </div>
             <div className="success-popup-body">
-              <p className="success-message">Your ICU bed has been successfully booked.</p>
+              <p className="success-message">{t('yourICUBedHasBeenSuccessfullyBooked')}.</p>
 
               <div className="booking-details">
                 <div className="detail-row">
-                  <span className="detail-label">Booking ID:</span>
+                  <span className="detail-label">{t('bookingID')}:</span>
                   <span className="detail-value">{bookingConfirmation.booking_id}</span>
                 </div>
                 <div className="detail-row">
-                  <span className="detail-label">Hospital:</span>
+                  <span className="detail-label">{t('hospital')}:</span>
                   <span className="detail-value">{bookingConfirmation.hospital_name}</span>
                 </div>
                 <div className="detail-row">
-                  <span className="detail-label">Location:</span>
+                  <span className="detail-label">{t('location')}:</span>
                   <span className="detail-value">{bookingConfirmation.location}</span>
                 </div>
                 <div className="detail-row">
-                  <span className="detail-label">Check-in Date:</span>
+                  <span className="detail-label">{t('checkInDate')}:</span>
                   <span className="detail-value">
                     {new Date(bookingConfirmation.check_in_date).toLocaleDateString('en-US', {
                       weekday: 'long',
@@ -531,24 +535,24 @@ const ICUBooking = () => {
                   </span>
                 </div>
                 <div className="detail-row">
-                  <span className="detail-label">Price/Day:</span>
+                  <span className="detail-label">{t('pricePerDay')}:</span>
                   <span className="detail-value">৳{bookingConfirmation.price_per_day}</span>
                 </div>
                 <div className="detail-row">
-                  <span className="detail-label">Patient:</span>
+                  <span className="detail-label">{t('patient')}:</span>
                   <span className="detail-value">{bookingConfirmation.patient_name}</span>
                 </div>
                 <div className="detail-row">
-                  <span className="detail-label">Phone:</span>
+                  <span className="detail-label">{t('phone')}:</span>
                   <span className="detail-value">{bookingConfirmation.patient_phone}</span>
                 </div>
               </div>
 
-              <p className="email-notice">A confirmation email has been sent to your registered email address.</p>
+              <p className="email-notice">{t('confirmationEmailSent')}</p>
             </div>
             <div className="success-popup-footer">
               <button className="btn-confirm" onClick={() => setShowSuccessPopup(false)}>
-                Done
+                {t('done')}
               </button>
             </div>
           </div>

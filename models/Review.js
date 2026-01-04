@@ -11,12 +11,13 @@ const reviewSchema = new mongoose.Schema(
     targetId: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
-      refPath: 'targetType',
+      // Note: refPath won't work directly for 'patient' since model is 'User'
+      // We'll handle population manually in the controller
     },
     appointmentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Appointment',
-      required: true, 
+      required: false, // Optional - allow reviews without appointments
     },
     rating: {
       type: Number,
@@ -41,11 +42,13 @@ const reviewSchema = new mongoose.Schema(
 );
 
 
-reviewSchema.index({ appointmentId: 1 }, { unique: true });
+// Only create unique index if appointmentId exists
+reviewSchema.index({ appointmentId: 1 }, { unique: true, sparse: true });
 
 
 reviewSchema.set('autoIndex', false);
 
-module.exports = mongoose.model('Review', reviewSchema);
+// Prevent model overwrite error - check if model already exists
+module.exports = mongoose.models.Review || mongoose.model('Review', reviewSchema);
 
 

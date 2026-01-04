@@ -7,10 +7,12 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { doctorAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import '../styles/Auth.css';
 
 const ManageSchedule = () => {
   const { logout, user } = useAuth();
+  const { t, toggleLanguage, language } = useLanguage();
   const navigate = useNavigate();
 
   const [schedule, setSchedule] = useState([]);
@@ -76,14 +78,14 @@ const ManageSchedule = () => {
     navigate('/login');
   };
 
-  if (loading) return <div className="auth-container">Loading...</div>;
+  if (loading) return <div className="auth-container">{t('loading')}</div>;
 
   return (
     <div className="auth-container">
       {/* Header */}
       <div className="auth-header">
         <button className="hamburger-menu">☰</button>
-        <h1>HealthConnect</h1>
+        <h1>{t('appName')}</h1>
         <div></div>
       </div>
 
@@ -93,35 +95,36 @@ const ManageSchedule = () => {
           <span>🏥</span>
         </div>
         <ul className="nav-links">
-          <li><Link to="/hospitals">Hospitals</Link></li>
-          <li><Link to="/doctors">Doctors</Link></li>
-          <li><Link to="/appointments">Appointments</Link></li>
-          <li><Link to="/profile">Profile</Link></li>
-          <li><Link to="/documents">Documents</Link></li>
+          <li><Link to="/hospitals">{t('hospitals')}</Link></li>
+          <li><Link to="/doctors">{t('doctors')}</Link></li>
+          <li><Link to="/appointments">{t('appointments')}</Link></li>
+          <li><Link to="/profile">{t('myProfile')}</Link></li>
+          <li><Link to="/documents">{t('myDocuments')}</Link></li>
         </ul>
         <div className="nav-buttons">
           <Link to="/dashboard">
-            <button className="btn-submit" style={{ marginRight: '10px' }}>Dashboard</button>
+            <button className="btn-submit" style={{ marginRight: '10px' }}>{t('dashboard')}</button>
           </Link>
           <button className="btn-dark" onClick={handleLogout}>
-            Logout
+            {t('logout')}
           </button>
+          <button onClick={toggleLanguage} style={{ marginLeft: '10px' }} className="btn-outline">{language === 'en' ? 'বাংলা' : 'English'}</button>
         </div>
       </nav>
 
       {/* Main Content - CENTERED */}
       <div className="auth-content" style={{ display: 'flex', justifyContent: 'center', paddingBottom: '50px' }}>
         <div className="auth-card" style={{ width: '100%', maxWidth: '800px' }}>
-          <h2>Manage My Availability</h2>
+          <h2>{t('manageAvailability')}</h2>
           
           <p style={{marginBottom: '20px', color: '#666'}}>
-            Set your weekly recurring schedule here. This will be visible to patients when booking appointments.
+            {t('instructionDoctor')}
           </p>
 
           {message && <div className="success-message">{message}</div>}
           
           <div className="form-group">
-            <label>Appointment Duration (minutes)</label>
+            <label>{t('appointmentDuration') || 'Appointment Duration (minutes)'}</label>
             <select value={duration} onChange={(e) => setDuration(Number(e.target.value))}>
               <option value="15">15 mins</option>
               <option value="30">30 mins</option>
@@ -158,7 +161,7 @@ const ManageSchedule = () => {
                       onChange={(e) => handleChange(index, 'startTime', e.target.value)}
                       className="form-control"
                     />
-                    <span>to</span>
+                    <span>{t('to') || 'to'}</span>
                     <input 
                       type="time" 
                       value={day.endTime} 
@@ -167,14 +170,14 @@ const ManageSchedule = () => {
                     />
                   </div>
                 ) : (
-                  <span style={{color: '#888'}}>Off Day</span>
+                  <span style={{color: '#888'}}>{t('offDay') || 'Off Day'}</span>
                 )}
               </div>
             ))}
           </div>
 
           <button onClick={handleSave} className="btn-submit btn-submit-dark" style={{ marginTop: '20px' }}>
-            Save Changes
+            {t('saveChanges')}
           </button>
         </div>
       </div>

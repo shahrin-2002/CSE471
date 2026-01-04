@@ -13,48 +13,67 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 60000, // 60 seconds timeout for slow internet connections
 });
+
+// Add request interceptor to include auth token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 // Add response interceptor to handle errors
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // 1. Get the URL that failed (safely)
-    const url = error.config ? error.config.url : '';
+    // Log full error for debugging
+    console.error('API Error:', {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message,
+      code: error.code
+    });
     
-    // 2. Check if this was a Login or OTP request
-    // We check for both so verifyOtp (401) doesn't kick you out too
-    const isAuthRequest = url.includes('login') || url.includes('verify-otp');
-
-    // 3. Only redirect if it's 401 AND NOT an auth request
-    if (error.response?.status === 401 && !isAuthRequest) {
+    // Handle timeout errors (slow internet)
+    if (error.code === 'ECONNABORTED' || error.message === 'Network Error') {
+      console.error('⏱️ Request timeout - Your internet connection may be slow');
+      error.message = 'Request timed out. Please check your internet connection and try again.';
+    }
+    
+    // Handle network errors (server not reachable)
+    if (!error.response && error.request) {
+      console.error('🌐 Network error - Unable to reach server');
+      if (error.code === 'ECONNREFUSED') {
+        error.message = 'Cannot connect to server. Please make sure the server is running on port 9358.';
+      } else {
+        error.message = 'Network error. Please check your internet connection.';
+      }
+    }
+    
+    // Handle 500 server errors with better messages
+    if (error.response?.status === 500) {
+      const serverMessage = error.response?.data?.message || error.response?.data?.error || 'Server error occurred';
+      console.error('❌ Server Error:', serverMessage);
+      // Keep the server's error message
+      error.message = serverMessage;
+    }
+    
+    if (error.response?.status === 401) {
+      // Token expired or invalid
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
     }
-    
     return Promise.reject(error);
   }
 );
-
-// Attach Authorization header and prevent caching
-api.interceptors.request.use((config) => {
-  try {
-    const token = localStorage.getItem('token');
-    config.headers = config.headers || {};
-
-    if (token && token !== 'undefined' && token !== 'null') {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-
-    // Prevent browser caching of API responses
-    config.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
-    config.headers['Pragma'] = 'no-cache';
-  } catch (e) {
-    // ignore
-  }
-  return config;
-});
 
 // =======================
 // Auth API endpoints
@@ -64,6 +83,15 @@ export const authAPI = {
   login: (credentials) => api.post('/auth/login', credentials),
   verifyOtp: (data) => api.post('/auth/verify-otp', data),
   getProfile: () => api.get('/auth/profile'),
+};
+
+// =======================
+// User API endpoints
+// =======================
+export const userAPI = {
+  search: (params) => api.get('/users/search', { params }),
+  getProfile: () => api.get('/users/me'),
+  updateProfile: (userData) => api.put('/users/me', userData),
 };
 
 // =======================
@@ -206,14 +234,81 @@ export const cabinAPI = {
   cancelBooking: (bookingId) => api.delete(`/cabin/booking/${bookingId}`),
 };
 
-export const prescriptionAPI = {
-  create: (data) => api.post('/prescriptions/create', data),
-  get: (id) => api.get(`/prescriptions/${id}`),
+// =======================
+// Reviews API endpoints
+// =======================
+export const reviewsAPI = {
+  list: () => api.get('/reviews/all'),
+  getByTarget: (targetType, targetId) => api.get(`/reviews/${targetType}/${targetId}`),
+  create: (reviewData) => api.post('/reviews', reviewData),
+  update: (id, reviewData) => api.put(`/reviews/${id}`, reviewData),
+  delete: (id) => api.delete(`/reviews/${id}`),
+  checkStatus: (appointmentId) => api.get(`/reviews/check/${appointmentId}`),
+  myReviews: () => api.get('/reviews/patient/my'),
+  myDoctorReviews: () => api.get('/reviews/doctor/my'),
+  listPending: () => api.get('/reviews/admin/pending/list'),
+  approve: (id) => api.patch(`/reviews/${id}/approve`),
+  reject: (id) => api.patch(`/reviews/${id}/reject`),
 };
 
-export const ambulanceAPI = {
-  book: (data) => api.post('/ambulance/book', data),
-  getStatus: (id) => api.get(`/ambulance/status/${id}`),
+// =======================
+// Favorites API endpoints
+// =======================
+export const favoritesAPI = {
+  toggle: (favoriteData) => api.post('/favorites/toggle', favoriteData),
+  list: (params) => api.get('/favorites/mine', { params }),
+  isFavorited: (targetType, targetId) => api.get(`/favorites/check/${targetType}/${targetId}`),
+};
+
+// =======================
+// Lab Orders API endpoints
+// =======================
+export const labAPI = {
+  // Get lab orders for current user (patient)
+  mine: () => api.get('/lab-orders/mine'),
+  
+  // Get lab orders for doctor (with search and filter)
+  mineDoctor: (params) => api.get('/lab-orders/doctor/mine', { params }),
+  
+  // Get lab orders for lab personnel
+  listLab: () => api.get('/lab-orders/lab/mine'),
+  
+  // Patient submits lab report (creates new order with file upload)
+  submitReport: (formData) => api.post('/lab-orders/submit', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  
+  // Create new lab order (doctor only)
+  create: (orderData) => api.post('/lab-orders', orderData),
+  
+  // Update lab order status
+  update: (id, updateData) => api.patch(`/lab-orders/${id}`, updateData),
+  
+  // Upload patient result
+  uploadResult: (id, formData) => api.patch(`/lab-orders/${id}/upload-result`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  
+  // Upload lab result (lab personnel)
+  uploadLabResult: (id, formData) => api.patch(`/lab-orders/${id}/lab-upload`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  
+  // Update lab status (lab personnel)
+  updateLabStatus: (id, statusData) => api.patch(`/lab-orders/${id}/lab-update`, statusData),
+  
+  // Delete lab order
+  delete: (id) => api.delete(`/lab-orders/${id}`),
+};
+
+// =======================
+// Notifications API endpoints
+// =======================
+export const notificationsAPI = {
+  sendOtp: (email) => api.post('/notifications/send-otp', { email }),
+  sendBookingConfirmation: (bookingData) => api.post('/notifications/booking-confirmation', bookingData),
+  sendAppointmentReminder: (appointmentId) => api.post('/notifications/appointment-reminder', { appointmentId }),
+  sendStatusUpdate: (userId, statusData) => api.post('/notifications/status-update', { userId, ...statusData }),
 };
 
 export default api;

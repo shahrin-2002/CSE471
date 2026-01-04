@@ -6,12 +6,6 @@ const hospitalSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-  // Optional localized Bangla name for UI
-  name_bn: {
-    type: String,
-    trim: true,
-    default: null
-  },
   location: {
     type: String,
     required: true

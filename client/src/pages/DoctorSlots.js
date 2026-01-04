@@ -1,19 +1,19 @@
 import { useEffect, useState } from 'react';
 import { appointmentsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import '../PatientAppointment.css';
 
 export default function DoctorSlots() {
   const { user } = useAuth(); // doctor user
+  const { toggleLanguage, language } = useLanguage();
   const [appointments, setAppointments] = useState([]);
   const [msg, setMsg] = useState('');
 
   // Load doctor's appointments
   const loadAppointments = async () => {
     try {
-      // Use doctorId (Doctor model ID) not user._id (User model ID)
-      const doctorId = user.doctorId || user._id;
-      const { data } = await appointmentsAPI.doctor(doctorId);
+      const { data } = await appointmentsAPI.doctor(user._id);
       setAppointments(data.appointments || []);
     } catch (err) {
       setMsg(err.response?.data?.error || 'Failed to load doctor appointments');
@@ -21,7 +21,7 @@ export default function DoctorSlots() {
   };
 
   useEffect(() => {
-    if (user?.doctorId || user?._id) loadAppointments();
+    if (user) loadAppointments();
   }, [user]);
 
   // Approve appointment
@@ -59,11 +59,9 @@ export default function DoctorSlots() {
 
   return (
     <div className="card">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-        <h2 style={{ margin: 0 }}>My Appointments (Doctor)</h2>
-        <button className="btn" onClick={loadAppointments} style={{ padding: '8px 16px' }}>
-          🔄 Refresh
-        </button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h2>My Appointments (Doctor)</h2>
+        <button onClick={toggleLanguage} style={{ padding: '8px 15px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>{language === 'en' ? 'বাংলা' : 'English'}</button>
       </div>
       {msg && <p className="kicker">{msg}</p>}
 

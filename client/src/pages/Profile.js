@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import api from '../services/api';
 import './Profile.css';
 
 export default function Profile() {
   const { user, setUser } = useAuth();
+  const { toggleLanguage, language } = useLanguage();
   const [form, setForm] = useState(user || {});
   const [msg, setMsg] = useState('');
 
@@ -37,7 +39,10 @@ export default function Profile() {
 
   return (
     <div className="card">
-      <h2>My Profile</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h2>My Profile</h2>
+        <button onClick={toggleLanguage} style={{ padding: '8px 15px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>{language === 'en' ? 'বাংলা' : 'English'}</button>
+      </div>
       {user.locked && (
         <p style={{ color: 'red', textAlign: 'center' }}>
           Your profile is locked. You cannot edit.

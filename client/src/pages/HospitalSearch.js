@@ -5,18 +5,21 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { hospitalAPI } from '../services/api';
+import { useLanguage } from '../context/LanguageContext';
+import { hospitalAPI, favoritesAPI } from '../services/api';
 import '../styles/Search.css';
 
 const HospitalSearch = () => {
   const navigate = useNavigate();
   const { isAuthenticated, logout } = useAuth();
+  const { toggleLanguage, language, t } = useLanguage();
 
   const [hospitals, setHospitals] = useState([]);
   const [selectedHospital, setSelectedHospital] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isFavorited, setIsFavorited] = useState(false);
 
   // Pagination
   const [total, setTotal] = useState(0);
@@ -53,8 +56,40 @@ const HospitalSearch = () => {
     try {
       const response = await hospitalAPI.getById(id);
       setSelectedHospital(response.data.data || response.data.hospital || response.data);
+      // Check if hospital is favorited
+      if (isAuthenticated) {
+        checkFavoriteStatus(id);
+      }
     } catch (err) {
       console.error('Fetch hospital details error:', err);
+    }
+  };
+
+  // Check if hospital is favorited
+  const checkFavoriteStatus = async (hospitalId) => {
+    try {
+      const response = await favoritesAPI.isFavorited('hospital', hospitalId);
+      setIsFavorited(response.data.isFavorited);
+    } catch (err) {
+      console.error('Check favorite status error:', err);
+    }
+  };
+
+  // Toggle favorite
+  const toggleFavorite = async () => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+
+    try {
+      await favoritesAPI.toggle({
+        targetType: 'hospital',
+        targetId: selectedHospital._id || selectedHospital.id
+      });
+      setIsFavorited(!isFavorited);
+    } catch (err) {
+      console.error('Toggle favorite error:', err);
     }
   };
 
@@ -86,7 +121,7 @@ const HospitalSearch = () => {
       {/* Header */}
       <div className="search-header">
         <button className="hamburger-menu">☰</button>
-        <h1>HealthConnect</h1>
+        <h1>{t('appName')}</h1>
         <div></div>
       </div>
 
@@ -96,37 +131,39 @@ const HospitalSearch = () => {
           <span>🏥</span>
         </div>
         <ul className="nav-links">
-          <li><Link to="/hospitals" className="active">Hospitals</Link></li>
-          <li><Link to="/doctors">Doctors</Link></li>
+          <li><Link to="/hospitals" className="active">{t('hospitals')}</Link></li>
+          <li><Link to="/doctors">{t('doctors')}</Link></li>
           <li className="nav-dropdown">
             <span className="nav-dropdown-toggle">
-              Booking <span className="dropdown-arrow">▼</span>
+              {t('booking')} <span className="dropdown-arrow">▼</span>
             </span>
             <ul className="nav-dropdown-menu">
-              <li><Link to="/booking/icu">ICU</Link></li>
-              <li><Link to="/booking/general-bed">General Bed</Link></li>
-              <li><Link to="/booking/cabin">Cabin</Link></li>
+              <li><Link to="/booking/icu">{t('icu')}</Link></li>
+              <li><Link to="/booking/general-bed">{t('generalBed')}</Link></li>
+              <li><Link to="/booking/cabin">{t('cabin')}</Link></li>
             </ul>
           </li>
-          <li><Link to="/appointments">Appointments</Link></li>
-          <li><Link to="/dashboard">Dashboard</Link></li>
+          <li><Link to="/appointments">{t('appointments')}</Link></li>
+          <li><Link to="/dashboard">{t('dashboard')}</Link></li>
         </ul>
         <div className="nav-buttons">
           {isAuthenticated ? (
             <>
               <Link to="/dashboard">
-                <button className="btn-outline">Dashboard</button>
+                <button className="btn-outline">{t('dashboard')}</button>
               </Link>
-              <button className="btn-dark" onClick={handleLogout}>Logout</button>
+              <button className="btn-dark" onClick={handleLogout}>{t('logout')}</button>
+              <button className="btn-outline" onClick={toggleLanguage} style={{ marginLeft: '10px' }}>{language === 'en' ? 'বাংলা' : 'English'}</button>
             </>
           ) : (
             <>
               <Link to="/login">
-                <button className="btn-outline">Sign in</button>
+                <button className="btn-outline">{t('signIn')}</button>
               </Link>
               <Link to="/register">
-                <button className="btn-dark">Register</button>
+                <button className="btn-dark">{t('register')}</button>
               </Link>
+              <button className="btn-outline" onClick={toggleLanguage} style={{ marginLeft: '10px' }}>{language === 'en' ? 'বাংলা' : 'English'}</button>
             </>
           )}
         </div>
@@ -138,7 +175,7 @@ const HospitalSearch = () => {
           <span className="search-icon">🔍</span>
           <input
             type="text"
-            placeholder="Find Hospitals"
+            placeholder={t('findHospitals')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="search-input"
@@ -187,7 +224,13 @@ const HospitalSearch = () => {
               <div className="search-details">
                 <div className="details-card">
                   <div className="details-image">
-                    <button className="favorite-btn">♡</button>
+                    <button
+                      className={`favorite-btn ${isFavorited ? 'favorited' : ''}`}
+                      onClick={toggleFavorite}
+                      title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+                    >
+                      {isFavorited ? '♥' : '♡'}
+                    </button>
                     <div className="image-placeholder">
                       <span>🏥</span>
                     </div>
@@ -233,7 +276,7 @@ const HospitalSearch = () => {
 
                     <div className="about-section">
                       <div className="about-header">
-                        <span>About</span>
+                        <span>{t('about')}</span>
                         <span className="about-toggle">▲</span>
                       </div>
                       <h4>{selectedHospital.name} - {selectedHospital.city}</h4>
@@ -243,13 +286,13 @@ const HospitalSearch = () => {
                           We provide comprehensive medical services with state-of-the-art facilities.`}
                       </p>
                       {selectedHospital.beds_total && (
-                        <p><strong>Total Beds:</strong> {selectedHospital.beds_total}</p>
+                        <p><strong>{t('totalBeds')}</strong> {selectedHospital.beds_total}</p>
                       )}
                       {selectedHospital.phone && (
-                        <p><strong>Phone:</strong> {selectedHospital.phone}</p>
+                        <p><strong>{t('phoneLabel')}</strong> {selectedHospital.phone}</p>
                       )}
                       {selectedHospital.email && (
-                        <p><strong>Email:</strong> {selectedHospital.email}</p>
+                        <p><strong>{t('emailLabel')}</strong> {selectedHospital.email}</p>
                       )}
                     </div>
                   </div>

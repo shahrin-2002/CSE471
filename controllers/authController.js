@@ -137,16 +137,13 @@ class AuthController {
         return res.status(400).json({ error: 'Validation Error', message: 'Email and password required' });
       }
 
-  const user = await User.findByEmail(email);
+      const user = await User.findByEmail(email);
       if (!user) {
-        console.warn(`[Auth] Login attempt failed - user not found: ${email}`);
         return res.status(401).json({ error: 'Auth Failed', message: 'Invalid credentials' });
       }
 
       const isMatch = await user.comparePassword(password);
-      console.log(`[Auth] Password compare for ${email}: ${isMatch}`);
       if (!isMatch) {
-        console.warn(`[Auth] Login attempt failed - invalid password for: ${email}`);
         return res.status(401).json({ error: 'Auth Failed', message: 'Invalid credentials' });
       }
 
@@ -158,46 +155,83 @@ class AuthController {
           { expiresIn: '24h' }
         );
 
-        // Build user response
-        const userResponse = user.toJSON();
-
-        // If doctor, include the Doctor profile ID
-        if (user.role === 'doctor') {
-          const doctorProfile = await Doctor.findOne({ user_id: user._id });
-          if (doctorProfile) {
-            userResponse.doctorId = doctorProfile._id;
-          }
-        }
-
         return res.status(200).json({
           message: 'Login successful',
           token,
-          user: userResponse
+          user: user.toJSON()
         });
       }
 
       // Generate OTP
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-      user.otp = otp;
-      user.otpExpires = Date.now() + 10 * 60 * 1000;
-      await user.save();
+      try {
+        user.otp = otp;
+        user.otpExpires = Date.now() + 10 * 60 * 1000;
+        await user.save();
+        console.log(`✅ OTP saved for user: ${user.email}`);
+      } catch (saveError) {
+        console.error('❌ Failed to save OTP to database:', saveError);
+        throw new Error('Failed to save OTP. Please try again.');
+      }
 
-      await sendEmail(
-        user.email,
-        'Your Login Code',
-        `Your verification code is: ${otp}. It expires in 10 minutes.`
-      );
+      // ALWAYS log OTP to console immediately (for development/testing)
+      console.log('\n' + '='.repeat(60));
+      console.log(`📧 OTP CODE FOR LOGIN`);
+      console.log(`   Email: ${user.email}`);
+      console.log(`   OTP: ${otp}`);
+      console.log(`   Expires in: 10 minutes`);
+      console.log('='.repeat(60) + '\n');
 
+      // Send response immediately, then try to send email in background
       res.status(200).json({
         message: 'OTP sent to email',
         requiresOtp: true,
         email: user.email
       });
 
+      // Try to send email asynchronously (don't block response)
+      // Use setImmediate to send email after response is sent
+      setImmediate(async () => {
+        try {
+          await sendEmail(
+            user.email,
+            'Your Login Code',
+            `Your verification code is: ${otp}. It expires in 10 minutes.`
+          );
+          console.log(`✅ OTP email sent successfully to: ${user.email}`);
+        } catch (emailError) {
+          console.error('⚠️ Failed to send OTP email:', emailError.message);
+          console.log('💡 OTP is available in the console above - you can use it to login');
+        }
+      });
+
     } catch (error) {
       console.error('Login error:', error);
-      res.status(500).json({ error: 'Server Error', message: error.message });
+      console.error('Error stack:', error.stack);
+      
+      // Provide more detailed error information
+      let errorMessage = error.message;
+      let errorDetails = '';
+      
+      // Check for specific error types
+      if (error.name === 'MongoError' || error.name === 'MongooseError') {
+        errorMessage = 'Database connection error. Please check your MongoDB connection.';
+        errorDetails = error.message;
+      } else if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+        errorMessage = 'Cannot connect to database. Please check your internet connection and MongoDB settings.';
+        errorDetails = error.message;
+      } else if (error.response && error.response.status) {
+        // Email service error
+        errorMessage = 'Failed to send verification email. Please check email service configuration.';
+        errorDetails = error.message;
+      }
+      
+      res.status(500).json({ 
+        error: 'Server Error', 
+        message: errorMessage,
+        ...(process.env.NODE_ENV !== 'production' && { details: errorDetails, stack: error.stack })
+      });
     }
   }
 
@@ -211,19 +245,7 @@ class AuthController {
       if (!user) {
         return res.status(404).json({ error: 'User Not Found', message: 'User profile not found' });
       }
-
-      // Build user response
-      const userResponse = user.toJSON();
-
-      // If doctor, include the Doctor profile ID
-      if (user.role === 'doctor') {
-        const doctorProfile = await Doctor.findOne({ user_id: user._id });
-        if (doctorProfile) {
-          userResponse.doctorId = doctorProfile._id;
-        }
-      }
-
-      res.status(200).json({ message: 'Profile retrieved successfully', user: userResponse });
+      res.status(200).json({ message: 'Profile retrieved successfully', user: user.toJSON() });
     } catch (error) {
       console.error('Get profile error:', error);
       res.status(500).json({ error: 'Internal Server Error', message: 'An error occurred while fetching profile' });
@@ -260,21 +282,10 @@ class AuthController {
         { expiresIn: '24h' }
       );
 
-      // Build user response
-      const userResponse = user.toJSON();
-
-      // If doctor, include the Doctor profile ID
-      if (user.role === 'doctor') {
-        const doctorProfile = await Doctor.findOne({ user_id: user._id });
-        if (doctorProfile) {
-          userResponse.doctorId = doctorProfile._id;
-        }
-      }
-
       res.status(200).json({
         message: 'Login successful',
         token,
-        user: userResponse
+        user: user.toJSON()
       });
 
     } catch (error) {

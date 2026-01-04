@@ -6,12 +6,14 @@
 import React, { useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import '../styles/Auth.css';
 
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { login, verifyOtp } = useAuth();
+  const { t, toggleLanguage, language } = useLanguage();
 
   // Get success message from registration redirect
   const successMessage = location.state?.message;
@@ -91,7 +93,7 @@ const Login = () => {
       {/* Header */}
       <div className="auth-header">
         <button className="hamburger-menu">☰</button>
-        <h1>HealthConnect</h1>
+        <h1>{t('appName')}</h1>
         <div></div>
       </div>
 
@@ -101,18 +103,19 @@ const Login = () => {
           <span>🏥</span>
         </div>
         <ul className="nav-links">
-          <li><Link to="/hospitals">Hospitals</Link></li>
-          <li><Link to="/ambulance">Ambulance</Link></li>
-          <li><Link to="/doctors">Doctors</Link></li>
-          <li><Link to="/locations">Locations</Link></li>
-          <li><Link to="/booking">Booking</Link></li>
-          <li><Link to="/contact">Contact</Link></li>
-          <li><Link to="/link">Link</Link></li>
+          <li><Link to="/hospitals">{t('hospitals')}</Link></li>
+          <li><Link to="/ambulance">{t('ambulance')}</Link></li>
+          <li><Link to="/doctors">{t('doctors')}</Link></li>
+          <li><Link to="/locations">{t('locations')}</Link></li>
+          <li><Link to="/booking">{t('booking')}</Link></li>
+          <li><Link to="/contact">{t('contact')}</Link></li>
+          <li><Link to="/link">{t('link')}</Link></li>
         </ul>
         <div className="nav-buttons">
           <Link to="/register">
-            <button className="btn-dark">Register</button>
+            <button className="btn-dark">{t('register')}</button>
           </Link>
+          <button onClick={toggleLanguage} style={{ marginLeft: '10px' }} className="btn-outline">{language === 'en' ? 'বাংলা' : 'English'}</button>
         </div>
       </nav>
 
@@ -121,17 +124,17 @@ const Login = () => {
         <div className="auth-card">
           {/* Sign Up Link (Only show in credentials step) */}
           {step === 'credentials' && (
-            <div className="auth-link-top">
-              Don't have an account? <Link to="/register">Sign Up</Link>
+                <div className="auth-link-top">
+              {t('dontHaveAccount')} <Link to="/register">{t('signUp') || t('register')}</Link>
             </div>
           )}
 
-          <h2>{step === 'credentials' ? 'Log In' : 'Verification'}</h2>
+          <h2>{step === 'credentials' ? t('login') : t('verification')}</h2>
 
           {/* OTP Instruction Text */}
           {step === 'otp' && (
             <p style={{textAlign: 'center', fontSize: '14px', marginBottom: '20px', color: '#666'}}>
-              We sent a code to <strong>{formData.email}</strong>
+              {t('otpSentTo')} <strong>{formData.email}</strong>
             </p>
           )}
 
@@ -143,12 +146,12 @@ const Login = () => {
               // STEP 1: EMAIL & PASSWORD
               <>
                 <div className="form-group">
-                  <label htmlFor="email">Email</label>
+                  <label htmlFor="email">{t('email')}</label>
                   <input
                     type="email"
                     id="email"
                     name="email"
-                    placeholder="your@example.com"
+                    placeholder={t('newsletterPlaceholder') || 'your@example.com'}
                     value={formData.email}
                     onChange={handleChange}
                     required
@@ -156,7 +159,7 @@ const Login = () => {
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="password">Password</label>
+                  <label htmlFor="password">{t('password')}</label>
                   <input
                     type="password"
                     id="password"
@@ -171,7 +174,7 @@ const Login = () => {
             ) : (
               // STEP 2: OTP INPUT
               <div className="form-group">
-                <label htmlFor="otp">Enter 6-digit Code</label>
+                <label htmlFor="otp">{t('enterCode')}</label>
                 <input
                   type="text"
                   id="otp"
@@ -193,8 +196,8 @@ const Login = () => {
               disabled={loading}
             >
               {loading 
-                ? 'Processing...' 
-                : (step === 'credentials' ? 'Sign In' : 'Verify Code')
+                ? t('processing') 
+                : (step === 'credentials' ? t('signIn') : t('verifyCode'))
               }
             </button>
           </form>
@@ -207,13 +210,13 @@ const Login = () => {
                  onClick={() => setStep('credentials')}
                  style={{background:'none', border:'none', color:'#2B2B2B', textDecoration:'underline', cursor:'pointer'}}
                >
-                 Back to Login
+                 {t('backToLogin')}
                </button>
             </div>
           )}
 
           <div className="forgot-password">
-            <Link to="/forgot-password">Forgot password?</Link>
+            <Link to="/forgot-password">{t('forgotPassword')}</Link>
           </div>
         </div>
       </div>

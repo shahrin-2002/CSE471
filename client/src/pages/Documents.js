@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import api from '../services/api';
 
 export default function Documents() {
   const { user } = useAuth();
+  const { toggleLanguage, language } = useLanguage();
   const [docs, setDocs] = useState([]);
   const [file, setFile] = useState(null);
   const [msg, setMsg] = useState('');
@@ -48,7 +50,10 @@ export default function Documents() {
 
   return (
     <div className="card">
-      <h2>My Documents</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h2>My Documents</h2>
+        <button onClick={toggleLanguage} style={{ padding: '8px 15px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>{language === 'en' ? 'বাংলা' : 'English'}</button>
+      </div>
 
       <input type="file" onChange={e => setFile(e.target.files[0])} />
       <button className="btn" onClick={upload}>Upload</button>
